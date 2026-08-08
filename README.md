@@ -30,12 +30,14 @@ Environment variables:
 |---|---|
 | `GEMINI_API_KEY` | Required (or `GOOGLE_API_KEY`) |
 | `GEMINI_MODEL` | Optional model id; **default `gemini-3.1-pro-preview`** (Gemini 3.1 Pro) |
+| `VEDIC_MAX_WORKERS` | Optional parallel topic workers; **default `7`** (use `1` for sequential) |
 
 Generation defaults (in code, not env):
 
 | Setting | Default | Why |
 |---|---|---|
 | Temperature | **0** | Factual chart/dasa parsing; no creative sampling |
+| Topic parallelism | **parallel** | Each life-area query is an independent Gemini call |
 
 For contributor / coding-agent guidance you can edit, see [`PROJECT_INSTRUCTIONS.md`](PROJECT_INSTRUCTIONS.md).
 
@@ -53,6 +55,10 @@ vedicastroagent ~/Desktop/Srinu.txt -t career wealth marriage transits
 
 # Custom output path + transit reference date
 vedicastroagent ~/Desktop/Srinu.txt -o output/srinu.md --as-of 2026-08-08
+
+# Parallelism (topic Gemini calls run concurrently by default)
+vedicastroagent ~/Desktop/Srinu.txt -j 7          # default-ish: up to 7 parallel topics
+vedicastroagent ~/Desktop/Srinu.txt --workers 1   # sequential (debugging / rate limits)
 ```
 
 Or as a module:
@@ -80,5 +86,6 @@ Pushkara Navamsha is deduced by the model from navamsa placements when JH does n
 ## Notes
 
 - Gemini calls use **temperature 0** so responses stay factual and parsing-focused.
+- Multi-topic runs issue **parallel** Gemini calls by default (wall time ≈ slowest topic, not sum of all). Use `--workers 1` if you hit rate limits.
 - This is interpretive decision support grounded in the supplied chart export, not a substitute for a human Jyotishi.
 - Transit detail is strongest when your export includes a recent secondary chart and current dasa tables; the agent also asks Gemini for a forward 12-month gochara/dasa synthesis from `--as-of`.

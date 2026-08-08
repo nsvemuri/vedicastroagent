@@ -60,6 +60,17 @@ def build_parser() -> argparse.ArgumentParser:
         help="Parse the chart and print extracted metadata/context sizes without calling Gemini.",
     )
     parser.add_argument(
+        "-j",
+        "--workers",
+        type=int,
+        default=None,
+        metavar="N",
+        help=(
+            "Max parallel Gemini topic queries (default: 7, or VEDIC_MAX_WORKERS). "
+            "Use 1 for sequential runs."
+        ),
+    )
+    parser.add_argument(
         "--version",
         action="version",
         version=f"%(prog)s {__version__}",
@@ -91,6 +102,7 @@ def main(argv: list[str] | None = None) -> int:
             topics=args.topics,
             native_label=args.name or chart_path.stem,
             as_of=as_of,
+            max_workers=args.workers,
         )
     except Exception as exc:  # noqa: BLE001 - CLI boundary
         console.print(f"[red]Error:[/red] {exc}")

@@ -37,7 +37,7 @@ Incorrect D-2/D-4/dasa readings can come from **context extraction bugs** or fro
 | Path | Role |
 |---|---|
 | `src/vedicastroagent/cli.py` | CLI entrypoint |
-| `src/vedicastroagent/agent.py` | Multi-topic orchestration |
+| `src/vedicastroagent/agent.py` | Multi-topic orchestration (parallel Gemini calls by default) |
 | `src/vedicastroagent/chart_loader.py` | RTF/text parse, varga/dasa extraction |
 | `src/vedicastroagent/prompts.py` | System + per-topic parse checklists / focus |
 | `src/vedicastroagent/gemini_client.py` | Gemini API wrapper + `DEFAULT_MODEL` |

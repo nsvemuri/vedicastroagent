@@ -91,3 +91,12 @@ def test_all_topics_have_parse_checklists():
         assert "Literal checklist" in prompt
         assert "As" in topic.parse_checklist or "MD" in topic.parse_checklist
         assert topic.key in {"career", "wealth", "marriage", "children", "education", "spiritual", "transits"}
+
+
+def test_resolve_workers_caps_to_topic_count():
+    from vedicastroagent.agent import DEFAULT_WORKERS, _resolve_workers
+
+    assert _resolve_workers(None, topic_count=7) == min(DEFAULT_WORKERS, 7)
+    assert _resolve_workers(4, topic_count=7) == 4
+    assert _resolve_workers(10, topic_count=3) == 3
+    assert _resolve_workers(1, topic_count=7) == 1

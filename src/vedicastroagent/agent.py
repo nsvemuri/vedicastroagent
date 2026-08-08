@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import os
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
 from datetime import date
 from pathlib import Path
@@ -9,6 +11,9 @@ from pathlib import Path
 from .chart_loader import ChartDocument, current_vimsottari_summary, extract_relevant_context, load_chart_file
 from .gemini_client import GeminiClient
 from .prompts import SYSTEM_INSTRUCTION, TOPICS, TopicSpec, build_user_prompt
+
+# Default parallelism for multi-topic runs (I/O-bound Gemini calls).
+DEFAULT_WORKERS = 7
 
 
 @dataclass
@@ -59,6 +64,7 @@ class VedicAstroAgent:
         topics: list[str] | None = None,
         native_label: str | None = None,
         as_of: date | None = None,
+        max_workers: int | None = None,
     ) -> AnalysisReport:
         chart = load_chart_file(path)
         return self.analyze_chart(
@@ -66,6 +72,7 @@ class VedicAstroAgent:
             topics=topics,
             native_label=native_label,
             as_of=as_of,
+            max_workers=max_workers,
         )
 
     def analyze_chart(
@@ -75,37 +82,87 @@ class VedicAstroAgent:
         topics: list[str] | None = None,
         native_label: str | None = None,
         as_of: date | None = None,
+        max_workers: int | None = None,
     ) -> AnalysisReport:
         selected = _select_topics(topics)
         as_of = as_of or date.today()
         as_of_label = as_of.isoformat()
         report = AnalysisReport(chart=chart, model=self.client.config.model)
+        workers = _resolve_workers(max_workers, topic_count=len(selected))
 
-        for topic in selected:
-            context = extract_relevant_context(chart, topic.key)
-            if topic.key == "transits":
-                dasa = current_vimsottari_summary(chart, as_of_year=as_of.year)
-                if dasa:
-                    context += (
-                        "\n\n=== VIMSHOTTARI WINDOWS NEAR ANALYSIS DATE ===\n" + dasa
+        if workers <= 1 or len(selected) == 1:
+            for topic in selected:
+                report.results.append(
+                    self._analyze_one_topic(
+                        chart,
+                        topic,
+                        native_label=native_label,
+                        as_of_label=as_of_label,
+                        as_of_year=as_of.year,
                     )
-                context += (
-                    f"\n\nAnalysis reference date: {as_of_label}. "
-                    "Provide a forward 12-month outlook from this date."
                 )
+            return report
 
-            prompt = build_user_prompt(
-                topic,
-                context,
-                native_label=native_label,
-                as_of=as_of_label,
-                model_name=self.client.config.model,
-            )
-            response = self.client.generate(system=SYSTEM_INSTRUCTION, user=prompt)
-            report.results.append(
-                TopicResult(topic=topic, response=response, context_chars=len(context))
-            )
+        # Parallel Gemini calls; preserve canonical topic order in the report.
+        indexed: dict[int, TopicResult] = {}
+        with ThreadPoolExecutor(max_workers=workers) as pool:
+            futures = {
+                pool.submit(
+                    self._analyze_one_topic,
+                    chart,
+                    topic,
+                    native_label=native_label,
+                    as_of_label=as_of_label,
+                    as_of_year=as_of.year,
+                ): idx
+                for idx, topic in enumerate(selected)
+            }
+            for future in as_completed(futures):
+                idx = futures[future]
+                indexed[idx] = future.result()
+
+        report.results = [indexed[i] for i in range(len(selected))]
         return report
+
+    def _analyze_one_topic(
+        self,
+        chart: ChartDocument,
+        topic: TopicSpec,
+        *,
+        native_label: str | None,
+        as_of_label: str,
+        as_of_year: int,
+    ) -> TopicResult:
+        context = extract_relevant_context(chart, topic.key)
+        if topic.key == "transits":
+            dasa = current_vimsottari_summary(chart, as_of_year=as_of_year)
+            if dasa:
+                context += "\n\n=== VIMSHOTTARI WINDOWS NEAR ANALYSIS DATE ===\n" + dasa
+            context += (
+                f"\n\nAnalysis reference date: {as_of_label}. "
+                "Provide a forward 12-month outlook from this date."
+            )
+
+        prompt = build_user_prompt(
+            topic,
+            context,
+            native_label=native_label,
+            as_of=as_of_label,
+            model_name=self.client.config.model,
+        )
+        response = self.client.generate(system=SYSTEM_INSTRUCTION, user=prompt)
+        return TopicResult(topic=topic, response=response, context_chars=len(context))
+
+
+def _resolve_workers(max_workers: int | None, *, topic_count: int) -> int:
+    if max_workers is not None:
+        workers = max_workers
+    else:
+        env = os.getenv("VEDIC_MAX_WORKERS")
+        workers = int(env) if env else DEFAULT_WORKERS
+    if workers < 1:
+        raise ValueError(f"max_workers must be >= 1, got {workers}")
+    return min(workers, topic_count)
 
 
 def _select_topics(topics: list[str] | None) -> list[TopicSpec]:
