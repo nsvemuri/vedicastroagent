@@ -31,6 +31,12 @@ Environment variables:
 | `GEMINI_API_KEY` | Required (or `GOOGLE_API_KEY`) |
 | `GEMINI_MODEL` | Optional model id; **default `gemini-3.1-pro-preview`** (Gemini 3.1 Pro) |
 
+Generation defaults (in code, not env):
+
+| Setting | Default | Why |
+|---|---|---|
+| Temperature | **0** | Factual chart/dasa parsing; no creative sampling |
+
 For contributor / coding-agent guidance you can edit, see [`PROJECT_INSTRUCTIONS.md`](PROJECT_INSTRUCTIONS.md).
 
 ## Usage
@@ -73,5 +79,6 @@ Pushkara Navamsha is deduced by the model from navamsa placements when JH does n
 
 ## Notes
 
-- This is interpretive decision support, not deterministic astrology software.
+- Gemini calls use **temperature 0** so responses stay factual and parsing-focused.
+- This is interpretive decision support grounded in the supplied chart export, not a substitute for a human Jyotishi.
 - Transit detail is strongest when your export includes a recent secondary chart and current dasa tables; the agent also asks Gemini for a forward 12-month gochara/dasa synthesis from `--as-of`.

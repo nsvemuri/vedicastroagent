@@ -17,8 +17,8 @@ DEFAULT_MODEL = "gemini-3.1-pro-preview"
 class GeminiConfig:
     api_key: str | None = None
     model: str = DEFAULT_MODEL
-    # Lower temperature favors faithful chart/dasa parsing over fluent invention.
-    temperature: float = 0.2
+    # Factual chart/dasa parsing: keep deterministic (no sampling creativity).
+    temperature: float = 0.0
     max_output_tokens: int = 8192
 
 

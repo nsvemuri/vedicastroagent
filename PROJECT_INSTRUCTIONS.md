@@ -19,7 +19,7 @@ Build a CLI Vedic astrology agent that:
 - Defined in `src/vedicastroagent/gemini_client.py` as `DEFAULT_MODEL`
 - Runtime override: env var `GEMINI_MODEL`
 - Auth: `GEMINI_API_KEY` or `GOOGLE_API_KEY`
-- Default sampling temperature: **0.2** (favor faithful parsing over inventive prose)
+- Default sampling temperature: **0** (factual / deterministic; do not raise unless the user explicitly asks)
 
 When docs or CLI text say “Gemini Pro” / “Gemini 3.1 Pro”, they mean this default unless overridden.
 
@@ -47,6 +47,7 @@ Incorrect D-2/D-4/dasa readings can come from **context extraction bugs** or fro
 ## Critical accuracy rules (do not regress)
 
 - Default model must remain **`gemini-3.1-pro-preview`** unless the user explicitly changes it.
+- Default temperature must remain **0** unless the user explicitly asks to change it.
 - Do **not** match bare `"Hora"` for wealth — it collides with `Hora Lord` / `Hora Lagna`. Use labeled **`D-2`** / **`D-4`** ASCII blocks.
 - Extract full JH diamond charts via `extract_varga_block()`.
 - Extract natal dasas via `extract_dasa_section()`; stop at the next dasa header.
@@ -78,7 +79,7 @@ Add items under **Requested changes** below. Be concrete: file/area, desired beh
 - Add/adjust tests in `tests/` when changing chart parsing or default model id.
 - Do not commit secrets (`.env`).
 - Do not invent ephemeris precision the export does not contain.
-- When tightening astrology accuracy, prefer prompt/checklist + extraction fixes over raising temperature.
+- When tightening astrology accuracy, prefer prompt/checklist + extraction fixes; keep temperature at **0**.
 
 ## Verification checklist
 

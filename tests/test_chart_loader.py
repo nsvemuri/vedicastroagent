@@ -19,6 +19,12 @@ def test_default_model_is_gemini_31_pro():
     assert "gemini-3.1-pro-preview" in SYSTEM_INSTRUCTION
 
 
+def test_default_temperature_is_zero():
+    from vedicastroagent.gemini_client import GeminiConfig
+
+    assert GeminiConfig.temperature == 0.0
+
+
 def test_strip_rtf_basic():
     rtf = r"{\rtf1\ansi\pard Natal Chart\par Date: March 15, 1981\par}"
     plain = strip_rtf(rtf)
