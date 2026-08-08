@@ -112,9 +112,12 @@ TOPICS: list[TopicSpec] = [
         focus=(
             "Analyze career, profession, status, business vs service, leadership, "
             "changes, and favorable fields.\n"
+            "Domain Depth: Look at 10th lord in Rasi and D-10, Amatyakaraka (AmK) relation to Atmakaraka (AK) "
+            "for Jaimini rajayogas. Compare 6th house (service) vs 7th house (independent/business). Assess "
+            "Arudha Lagna (AL) for public image and A10 (Rajya Pada). Evaluate Sun/Mars for leadership, "
+            "Mercury/Jupiter for advising/consulting. In D-10, the 1st/6th/10th axes dictate work environments.\n"
             "Primary Vargas: natal Rasi + ASCII block labeled D-10 / Dasamsa ONLY for dasamsa claims.\n"
-            "Also AmK, AL, Hora/Ghati Lagna cues, shadbala, 10th ashtakavarga, NATAL Vimshottari "
-            "(Narayana optional).\n"
+            "Also use Hora/Ghati Lagna cues, shadbala, 10th ashtakavarga, NATAL Vimshottari (Narayana optional).\n"
             "Do not cite D-9/D-2/D-4 placements as career proof unless clearly secondary support."
         ),
     ),
@@ -132,6 +135,9 @@ TOPICS: list[TopicSpec] = [
         focus=(
             "Analyze wealth accumulation, cash flow, savings, property/vehicles/fixed assets, "
             "and speculative gains.\n"
+            "Domain Depth: Assess Dhana Yogas (combinations of 1, 2, 5, 9, 11 lords) and Daridra Yogas (6, 8, 12). "
+            "Evaluate Indu Lagna and Sree Lagna for prosperity magnitude. In D-2, note 2nd house strength. In D-4, "
+            "evaluate 4th lord, Mars (bhoomikaraka/real-estate), and Venus (vahanakaraka/vehicles) for assets.\n"
             "HARD RULES:\n"
             "1) Liquid wealth: ONLY ASCII 'Varga block: D-2'. Ignore Hora Lord / Hora Lagna / Mahakala Hora.\n"
             "2) Property/fixed assets: ONLY ASCII 'Varga block: D-4' / Chaturthamsa.\n"
@@ -154,6 +160,9 @@ TOPICS: list[TopicSpec] = [
         focus=(
             "Analyze marriage timing, spouse significations, harmony/challenges, remarriage risks "
             "if indicated.\n"
+            "Domain Depth: Look at 7th lord and Venus (kalatrakaraka) / Jupiter (for women). Assess Upapada Lagna (UL) "
+            "for the nature of marriage and spouse's background; 2nd from UL dictates marriage longevity. Analyze Darakaraka (DK) "
+            "and Navamsa (D-9) lagna/7th house for inner dynamics. Check Kuja Dosha (Mars in 1, 2, 4, 7, 8, 12) or 8th house afflictions.\n"
             "Primary Vargas: natal Rasi 7th + ASCII D-9 / Navamsa block only for navamsa claims.\n"
             "Longitude-table Navamsa column may support dignity notes but does not replace the D-9 diamond.\n"
             "Use DK, Gulika/Mandi if relevant; NATAL Vimshottari only for timing.\n"
@@ -172,6 +181,10 @@ TOPICS: list[TopicSpec] = [
         ),
         focus=(
             "Analyze progeny happiness, timing, and possible challenges (sensitive, non-alarmist).\n"
+            "Domain Depth: Evaluate 5th house/lord from Lagna and Moon. Use Jupiter (Putrakaraka) and Jaimini PK. "
+            "Examine Saptamsa (D-7) lagna, 5th lord (1st child), 7th lord (2nd child). Check 9th house (5th from 5th) "
+            "for overall progeny luck. Note afflictions by Rahu/Ketu/Saturn on the 5th axis. State clearly if "
+            "Beeja/Kshetra sphuta indicates delay or requires remedies.\n"
             "Primary Vargas: natal Rasi 5th + ASCII D-7 / Saptamsa ONLY for saptamsa claims.\n"
             "Do not use D-5/D-9 as a substitute for D-7.\n"
             "Also PK, Jupiter, Beeja/Kshetra sphuta if present; NATAL Vimshottari for timing."
@@ -190,6 +203,9 @@ TOPICS: list[TopicSpec] = [
         focus=(
             "Analyze formal education, higher studies, technical vs traditional learning, "
             "teaching/research aptitude.\n"
+            "Domain Depth: Look at 2nd house (early schooling), 4th house (formal degree), 5th house (intellect/scholarship), "
+            "and 9th house (higher/foreign education). Assess Mercury (logic/memory) and Jupiter (wisdom). In D-24 (Siddhamsa), "
+            "evaluate 4th, 5th, and 9th axes. Mention technical (Mars/Ketu/Saturn) vs traditional/humanities (Jupiter/Venus) inclinations.\n"
             "Primary Vargas: natal Rasi 4th/5th/9th + ASCII D-24 (Siddhamsa) when present; D-5 only as support.\n"
             "Do not invent a D-24 lagna if the block is missing.\n"
             "Use Mercury/Jupiter + NATAL Vimshottari education windows."
@@ -208,6 +224,10 @@ TOPICS: list[TopicSpec] = [
         focus=(
             "Analyze spiritual inclination, sadhana style, teachers, renunciation vs householder path, "
             "and awakening periods.\n"
+            "Domain Depth: Examine 5th house (mantra/bhakti), 9th (guru/dharma), and 12th (moksha/letting go). "
+            "Assess Atmakaraka (AK) placement in D-9 (Karakamsa) and Ishta Devata (12th from Karakamsa). Evaluate "
+            "Ketu (mokshakaraka) and Jupiter. D-20 (Vimsamsa) indicates religious depth and sadhana. Check for "
+            "Pravrajya (renunciation) yogas or heavy satvic planetary influence.\n"
             "Use AK, Ketu, Rasi 12th/9th/5th, ASCII D-9; include D-20/D-60 only if those blocks exist.\n"
             "Do not mix D-20 planets into D-60 claims or vice versa.\n"
             "Timing: NATAL Vimshottari; Moola Dasa only if the Moola table is present and quoted."
@@ -225,6 +245,10 @@ TOPICS: list[TopicSpec] = [
         ),
         focus=(
             "Provide a practical 12-month transit + dasa outlook from the analysis date.\n"
+            "Domain Depth: Synthesize double-transit (Jupiter and Saturn aspecting the same house/lord) to time major events. "
+            "Evaluate Sade Sati (Saturn transiting 12th, 1st, 2nd from Natal Moon) or Ashtama Shani (Saturn in 8th from Moon). "
+            "Assess Rahu/Ketu transits across the 1/7 or 4/10 axes. Judge transit impacts from both Lagna and Moon sign. "
+            "Ground all transit triggers strictly within the running NATAL Vimshottari MD/AD's promise.\n"
             "Base houses on natal Rasi; secondary snapshot is gochara positions only.\n"
             "HARD RULE: never take Vimshottari/Sudasa/Narayana from the secondary chart.\n"
             "Timing backbone = NATAL Vimshottari MD/AD with quoted dates; optional natal Narayana/Sudasa.\n"
