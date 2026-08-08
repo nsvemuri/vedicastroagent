@@ -9,14 +9,16 @@ from google import genai
 from google.genai import types
 
 
-DEFAULT_MODEL = "gemini-2.5-pro"
+# Gemini 3.1 Pro (API model id). Override with GEMINI_MODEL if needed.
+DEFAULT_MODEL = "gemini-3.1-pro-preview"
 
 
 @dataclass
 class GeminiConfig:
     api_key: str | None = None
     model: str = DEFAULT_MODEL
-    temperature: float = 0.35
+    # Lower temperature favors faithful chart/dasa parsing over fluent invention.
+    temperature: float = 0.2
     max_output_tokens: int = 8192
 
 

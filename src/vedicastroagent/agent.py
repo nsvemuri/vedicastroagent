@@ -99,6 +99,7 @@ class VedicAstroAgent:
                 context,
                 native_label=native_label,
                 as_of=as_of_label,
+                model_name=self.client.config.model,
             )
             response = self.client.generate(system=SYSTEM_INSTRUCTION, user=prompt)
             report.results.append(

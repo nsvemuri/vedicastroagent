@@ -1,6 +1,6 @@
 # Vedic Astrology Agent
 
-CLI agent that reads a **Jagannatha Hora** natal chart export (plain text or RTF, including `.txt` files that are actually RTF) and runs focused **Gemini Pro** analyses for:
+CLI agent that reads a **Jagannatha Hora** natal chart export (plain text or RTF, including `.txt` files that are actually RTF) and runs focused **Gemini 3.1 Pro** (`gemini-3.1-pro-preview` by default) analyses for:
 
 - Career
 - Wealth (Hora **D-2** and Chaturthamsa **D-4**)
@@ -29,7 +29,9 @@ Environment variables:
 | Variable | Purpose |
 |---|---|
 | `GEMINI_API_KEY` | Required (or `GOOGLE_API_KEY`) |
-| `GEMINI_MODEL` | Optional, default `gemini-2.5-pro` |
+| `GEMINI_MODEL` | Optional model id; **default `gemini-3.1-pro-preview`** (Gemini 3.1 Pro) |
+
+For contributor / coding-agent guidance you can edit, see [`PROJECT_INSTRUCTIONS.md`](PROJECT_INSTRUCTIONS.md).
 
 ## Usage
 

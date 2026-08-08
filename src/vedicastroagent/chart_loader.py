@@ -8,103 +8,87 @@ from pathlib import Path
 from typing import Iterable
 
 
+# Prefer precise varga labels. Avoid bare "Hora" — it matches Hora Lord / Hora Lagna.
+TOPIC_VARGAS: dict[str, list[str]] = {
+    "career": ["Rasi", "D-10", "Dasamsa"],
+    "wealth": ["Rasi", "D-2", "D-4", "Chaturthamsa"],
+    "marriage": ["Rasi", "D-9", "Navamsa"],
+    "children": ["Rasi", "D-7", "Saptamsa"],
+    "education": ["Rasi", "D-24", "D-5"],
+    "spiritual": ["Rasi", "D-9", "D-20", "D-60", "Navamsa"],
+    "transits": ["Rasi"],
+}
+
+TOPIC_DASAS: dict[str, list[str]] = {
+    "career": ["Vimsottari Dasa", "Narayana Dasa"],
+    "wealth": ["Vimsottari Dasa", "Sudasa"],
+    "marriage": ["Vimsottari Dasa"],
+    "children": ["Vimsottari Dasa"],
+    "education": ["Vimsottari Dasa"],
+    "spiritual": ["Vimsottari Dasa", "Moola Dasa"],
+    "transits": ["Vimsottari Dasa", "Narayana Dasa", "Sudasa"],
+}
+
 TOPIC_SECTION_HINTS: dict[str, list[str]] = {
     "career": [
-        "Rasi",
-        "D-10",
-        "Dasamsa",
-        "D-1",
         "Shadbala",
         "Ashtakavarga",
-        "Vimsottari",
-        "Narayana Dasa",
         "Chara karaka",
         "Hora Lagna",
         "Ghati Lagna",
-        "AL",
-        "Amatyakaraka",
         "AmK",
     ],
     "wealth": [
-        "Rasi",
-        "D-2",
-        "Hora",
-        "D-4",
-        "Chaturthamsa",
-        "Sudasa",
-        "Ashtakavarga",
-        "Vimsottari",
         "Shadbala",
+        "Ashtakavarga",
         "Chara karaka",
         "Hora Lagna",
         "Sree Lagna",
-        "AL",
+        "AmK",
     ],
     "marriage": [
-        "Rasi",
-        "D-9",
-        "Navamsa",
-        "Navamsha",
-        "Upapada",
-        "DK",
         "Chara karaka",
-        "Vimsottari",
         "Shadbala",
         "Gulika",
         "Maandi",
         "Mandi",
+        "DK",
     ],
     "children": [
-        "Rasi",
-        "D-7",
-        "Saptamsa",
-        "Saptamsha",
-        "PK",
         "Chara karaka",
-        "Vimsottari",
         "Beeja Sphuta",
         "Kshetra Sphuta",
-        "Jupiter",
-        "Putra",
+        "PK",
     ],
     "education": [
-        "Rasi",
-        "D-24",
-        "Siddhamsa",
-        "Mercury",
-        "Jupiter",
-        "Vimsottari",
         "Shadbala",
-        "D-5",
         "Ashtakavarga",
+        "Chara karaka",
         "GK",
     ],
     "spiritual": [
-        "Rasi",
-        "D-20",
-        "D-60",
-        "D-9",
-        "Navamsa",
-        "Ketu",
-        "Jupiter",
-        "Vimsottari",
-        "Moola Dasa",
+        "Chara karaka",
         "Bhrigu Bindu",
-        "Ishta",
         "Pushkara",
-        "Atmakaraka",
         "AK",
     ],
     "transits": [
-        "Vimsottari",
-        "Narayana Dasa",
-        "Sudasa",
-        "Rasi",
         "Ashtakavarga",
         "Chara karaka",
         "Shadbala",
     ],
 }
+
+_DASA_HEADERS = (
+    "Vimsottari Dasa",
+    "Moola Dasa",
+    "Ashtottari Dasa",
+    "Kalachakra Dasa",
+    "Narayana Dasa",
+    "Sudasa",
+    "Yogini Dasa",
+    "Chara Dasa",
+)
 
 
 @dataclass
@@ -219,69 +203,136 @@ def _clean_meta_value(value: str) -> str:
     return value.strip().strip("\\").strip()
 
 
+def extract_varga_block(text: str, label: str) -> str | None:
+    """Extract one full JH ASCII diamond chart block containing ``label`` (e.g. D-2)."""
+    lines = text.splitlines()
+    pattern = _varga_label_pattern(label)
+    hit: int | None = None
+    for idx, line in enumerate(lines):
+        if pattern.search(line):
+            hit = idx
+            break
+    if hit is None:
+        return None
+
+    start = hit
+    while start > 0 and not re.match(r"^\s*\+-", lines[start]):
+        start -= 1
+        if hit - start > 40:
+            start = max(0, hit - 12)
+            break
+
+    end = hit
+    while end < len(lines) - 1:
+        end += 1
+        if re.match(r"^\s*\+-", lines[end]) and end > hit:
+            end += 1
+            break
+        if end - hit > 45:
+            break
+
+    block = "\n".join(lines[start:end]).strip()
+    return block or None
+
+
+def extract_dasa_section(text: str, title: str) -> str | None:
+    """Extract a dasa table from its header until the next dasa header."""
+    lines = text.splitlines()
+    pattern = re.compile(re.escape(title), re.I)
+    start: int | None = None
+    for idx, line in enumerate(lines):
+        if pattern.search(line):
+            start = idx
+            break
+    if start is None:
+        return None
+
+    end = len(lines)
+    header_re = re.compile("|".join(re.escape(h) for h in _DASA_HEADERS), re.I)
+    for idx in range(start + 1, len(lines)):
+        if header_re.search(lines[idx]):
+            end = idx
+            break
+    block = "\n".join(lines[start:end]).strip()
+    # Cap extremely long Sudasa/Narayana dumps while keeping structure.
+    if len(block) > 7000:
+        block = block[:7000] + "\n[...dasa table truncated...]"
+    return block or None
+
+
 def extract_relevant_context(
     chart: ChartDocument,
     topic: str,
     *,
-    max_chars: int = 28000,
+    max_chars: int = 32000,
 ) -> str:
     """Build a focused chart excerpt for a life-area query."""
-    hints = TOPIC_SECTION_HINTS.get(topic, [])
-    natal_excerpt = _excerpt_by_hints(chart.natal_text, hints, max_chars=max_chars)
-
-    parts = [
-        "=== NATAL CHART CONTEXT ===",
+    parts: list[str] = [
+        "=== NATAL CHART METADATA ===",
         _format_metadata(chart.metadata),
-        natal_excerpt,
+        "",
+        "=== NATAL LONGITUDE / KARAKA TABLE (D-1 body list) ===",
+        _header_table(chart.natal_text),
     ]
 
-    if topic == "transits" and chart.secondary_text:
-        secondary = _excerpt_by_hints(
-            chart.secondary_text,
-            TOPIC_SECTION_HINTS["transits"] + ["Rasi", "Body", "Longitude"],
-            max_chars=max_chars // 2,
-        )
+    vargas = TOPIC_VARGAS.get(topic, ["Rasi"])
+    varga_parts: list[str] = []
+    for label in vargas:
+        block = extract_varga_block(chart.natal_text, label)
+        if block:
+            varga_parts.append(f"--- Varga block: {label} ---\n{block}")
+    if varga_parts:
+        parts.extend(["", "=== LABELED DIVISIONAL / RASI ASCII CHARTS ===", *varga_parts])
+    else:
+        parts.append("\n(No labeled varga ASCII blocks matched for this topic.)")
+
+    dasa_titles = TOPIC_DASAS.get(topic, ["Vimsottari Dasa"])
+    dasa_parts: list[str] = []
+    for title in dasa_titles:
+        block = extract_dasa_section(chart.natal_text, title)
+        if block:
+            dasa_parts.append(block)
+    if dasa_parts:
         parts.extend(
             [
                 "",
-                "=== SECONDARY / TRANSIT SNAPSHOT (from same export) ===",
-                _format_metadata(chart.secondary_metadata),
-                secondary,
+                "=== NATAL DASA TABLES (use ONLY these for dasa timing; ignore any secondary-chart dasas) ===",
+                *dasa_parts,
             ]
         )
-    elif chart.secondary_text and topic in {"career", "wealth", "marriage"}:
-        # Light transit cue for timing-sensitive topics.
-        dasa = _extract_named_sections(
-            chart.secondary_text,
-            ["Vimsottari Dasa", "Narayana Dasa", "Sudasa"],
-            window=40,
-        )
-        if dasa:
-            parts.extend(
-                [
-                    "",
-                    "=== CURRENT-PERIOD DASA SNAPSHOT (secondary chart) ===",
-                    dasa[:6000],
-                ]
-            )
 
-    # Always attach Pushkara / karaka / upagraha cues when present.
-    extras = _extract_named_sections(
+    hints = TOPIC_SECTION_HINTS.get(topic, [])
+    extras = _excerpt_by_hints(
         chart.natal_text,
-        [
-            "Chara karaka",
-            "Pushkara",
-            "Gulika",
-            "Maandi",
-            "Mandi",
-            "Shadbala",
-            "Ashtakavarga of Rasi Chart",
-            "Vimsottari Dasa",
-        ],
-        window=35,
+        hints + ["Chara karaka", "Shadbala", "Ashtakavarga of Rasi Chart"],
+        max_chars=9000,
+        include_header=False,
     )
-    if extras and extras not in natal_excerpt:
-        parts.extend(["", "=== SHARED STRENGTH / KARAKA / DASA NOTES ===", extras[:8000]])
+    if extras.strip():
+        parts.extend(["", "=== SUPPORTING NATAL SECTIONS ===", extras])
+
+    # Secondary chart: planetary positions only (gochara snapshot). Never its dasas.
+    if chart.secondary_text and topic in {
+        "transits",
+        "career",
+        "wealth",
+        "marriage",
+        "children",
+        "education",
+        "spiritual",
+    }:
+        secondary_body = _header_table(chart.secondary_text)
+        secondary_rasi = extract_varga_block(chart.secondary_text, "Rasi")
+        parts.extend(
+            [
+                "",
+                "=== SECONDARY / TRANSIT SNAPSHOT (planetary positions only; NOT natal dasas) ===",
+                _format_metadata(chart.secondary_metadata),
+                secondary_body,
+            ]
+        )
+        if secondary_rasi:
+            parts.extend(["", "--- Transit snapshot Rasi ---", secondary_rasi])
 
     joined = "\n".join(parts).strip()
     if len(joined) > max_chars:
@@ -291,71 +342,88 @@ def extract_relevant_context(
 
 def current_vimsottari_summary(chart: ChartDocument, as_of_year: int | None = None) -> str:
     """Pick the Vimsottari mahadasa/antardasa lines around 'now' when possible."""
-    text = chart.natal_text
-    section = _extract_named_sections(text, ["Vimsottari Dasa"], window=40)
+    section = extract_dasa_section(chart.natal_text, "Vimsottari Dasa") or ""
     if not section:
         return ""
     if as_of_year is None:
-        return section[:2500]
+        return section[:3500]
 
     lines = [ln for ln in section.splitlines() if ln.strip()]
     relevant: list[str] = []
+    current_md = ""
     for ln in lines:
+        md_match = re.match(r"^([A-Za-z]+)\s+[A-Za-z]+\s+\d{4}-", ln)
+        if md_match:
+            current_md = md_match.group(1)
         years = [int(y) for y in re.findall(r"\b(19\d{2}|20\d{2})\b", ln)]
-        if any(as_of_year - 2 <= y <= as_of_year + 8 for y in years) or not years:
+        if years and any(as_of_year - 1 <= y <= as_of_year + 10 for y in years):
+            if current_md and (not relevant or not relevant[-1].startswith(current_md)):
+                # Keep mahadasa identity visible even on continuation slices.
+                relevant.append(f"[Mahadasa context: {current_md}]")
             relevant.append(ln)
-    return "\n".join(relevant[:40]) if relevant else section[:2500]
+        elif not years and "Dasa" in ln:
+            relevant.append(ln)
+    return "\n".join(relevant[:50]) if relevant else section[:3500]
 
 
-def _excerpt_by_hints(text: str, hints: Iterable[str], *, max_chars: int) -> str:
+def _varga_label_pattern(label: str) -> re.Pattern[str]:
+    """Match JH center labels like 'D-2 (US)', 'D-4', 'Rasi', 'Navamsa'."""
+    cleaned = label.strip()
+    if re.fullmatch(r"D-\d+", cleaned, re.I):
+        # Require D-n as a chart label, not a random substring.
+        return re.compile(rf"D-{cleaned[2:]}\b", re.I)
+    if cleaned.lower() == "rasi":
+        return re.compile(r"(?i)\bRasi\b")
+    # Word-ish labels: Hora chart is identified via D-2, not the word Hora alone.
+    return re.compile(rf"(?i)\b{re.escape(cleaned)}\b")
+
+
+def _header_table(text: str, max_lines: int = 110) -> str:
+    lines = text.splitlines()
+    # Prefer from Body longitude table through end of early karaka block.
+    start = 0
+    for idx, line in enumerate(lines):
+        if re.search(r"Body\s+Longitude", line, re.I):
+            start = idx
+            break
+    chunk = lines[start : start + max_lines]
+    return "\n".join(chunk)
+
+
+def _excerpt_by_hints(
+    text: str,
+    hints: Iterable[str],
+    *,
+    max_chars: int,
+    include_header: bool = True,
+) -> str:
     lines = text.splitlines()
     if not hints:
         return text[:max_chars]
 
-    selected: list[str] = []
-    used = set()
-    # Always keep the header / planet longitude table.
-    for idx, line in enumerate(lines[:120]):
-        selected.append(line)
-        used.add(idx)
+    used: set[int] = set()
+    if include_header:
+        for idx in range(min(120, len(lines))):
+            used.add(idx)
 
     for hint in hints:
+        # Avoid bare "Hora" false positives.
+        if hint.lower() == "hora":
+            continue
         pattern = re.compile(re.escape(hint), re.I)
         for idx, line in enumerate(lines):
             if idx in used:
                 continue
             if pattern.search(line):
-                start = max(0, idx - 2)
-                end = min(len(lines), idx + 28)
-                for j in range(start, end):
-                    if j not in used:
-                        selected.append(lines[j])
-                        used.add(j)
+                start = max(0, idx - 1)
+                end = min(len(lines), idx + 24)
+                used.update(range(start, end))
 
-    # Preserve rough reading order.
     ordered = [lines[i] for i in sorted(used)]
     excerpt = "\n".join(ordered)
     if len(excerpt) > max_chars:
         return excerpt[:max_chars] + "\n[...truncated...]"
     return excerpt
-
-
-def _extract_named_sections(text: str, titles: list[str], window: int = 30) -> str:
-    lines = text.splitlines()
-    chunks: list[str] = []
-    used = set()
-    for title in titles:
-        pattern = re.compile(re.escape(title), re.I)
-        for idx, line in enumerate(lines):
-            if pattern.search(line):
-                end = min(len(lines), idx + window)
-                block = "\n".join(lines[idx:end])
-                key = (idx, end)
-                if key not in used:
-                    chunks.append(block)
-                    used.add(key)
-                break
-    return "\n\n".join(chunks)
 
 
 def _format_metadata(meta: dict[str, str]) -> str:

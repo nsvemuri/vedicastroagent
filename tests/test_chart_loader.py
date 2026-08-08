@@ -1,10 +1,22 @@
 from pathlib import Path
 
-from vedicastroagent.chart_loader import extract_relevant_context, load_chart_file, strip_rtf
-from vedicastroagent.prompts import TOPICS
+from vedicastroagent.chart_loader import (
+    extract_dasa_section,
+    extract_relevant_context,
+    extract_varga_block,
+    load_chart_file,
+    strip_rtf,
+)
+from vedicastroagent.gemini_client import DEFAULT_MODEL
+from vedicastroagent.prompts import SYSTEM_INSTRUCTION, TOPICS, build_user_prompt
 
 
 FIXTURE = Path(__file__).parent / "fixtures" / "sample_chart.txt"
+
+
+def test_default_model_is_gemini_31_pro():
+    assert DEFAULT_MODEL == "gemini-3.1-pro-preview"
+    assert "gemini-3.1-pro-preview" in SYSTEM_INSTRUCTION
 
 
 def test_strip_rtf_basic():
@@ -24,9 +36,52 @@ def test_load_dual_chart_fixture():
     assert "D-4" in chart.natal_text
 
 
+def test_extract_varga_and_dasa_blocks():
+    chart = load_chart_file(FIXTURE)
+    d2 = extract_varga_block(chart.natal_text, "D-2")
+    d4 = extract_varga_block(chart.natal_text, "D-4")
+    assert d2 and "D-2" in d2
+    assert "Hora Lord" not in d2
+    assert d4 and "D-4" in d4
+    vim = extract_dasa_section(chart.natal_text, "Vimsottari Dasa")
+    assert vim and "Ket  Ket 2025-07-29" in vim
+    assert "Moola Dasa" not in vim
+
+
+def test_wealth_context_labels_d2_d4_and_natal_dasas():
+    chart = load_chart_file(FIXTURE)
+    ctx = extract_relevant_context(chart, "wealth", max_chars=40000)
+    assert "Varga block: D-2" in ctx
+    assert "Varga block: D-4" in ctx
+    assert "NATAL DASA TABLES" in ctx
+    assert "Vimsottari Dasa" in ctx
+    assert "NOT natal dasas" in ctx
+    # Must not confuse Hora Lord section as the D-2 chart source of truth alone.
+    assert "Hora Lord" not in ctx.split("Varga block: D-2")[1].split("Varga block:")[0]
+
+
 def test_topic_context_not_empty():
     chart = load_chart_file(FIXTURE)
     for topic in TOPICS:
-        ctx = extract_relevant_context(chart, topic.key, max_chars=12000)
-        assert "NATAL CHART CONTEXT" in ctx
+        ctx = extract_relevant_context(chart, topic.key, max_chars=20000)
+        assert "NATAL CHART METADATA" in ctx
         assert len(ctx) > 200
+        assert topic.parse_checklist.strip()
+
+
+def test_wealth_prompt_mentions_d2_parsing_rules():
+    wealth = next(t for t in TOPICS if t.key == "wealth")
+    prompt = build_user_prompt(wealth, "chart...", native_label="Srinu", model_name=DEFAULT_MODEL)
+    assert "D-2" in prompt
+    assert "Hora Lord" in prompt
+    assert "PARSE-FIRST" in prompt
+    assert "Literal checklist" in prompt
+    assert DEFAULT_MODEL in prompt
+
+
+def test_all_topics_have_parse_checklists():
+    for topic in TOPICS:
+        prompt = build_user_prompt(topic, "chart...")
+        assert "Literal checklist" in prompt
+        assert "As" in topic.parse_checklist or "MD" in topic.parse_checklist
+        assert topic.key in {"career", "wealth", "marriage", "children", "education", "spiritual", "transits"}

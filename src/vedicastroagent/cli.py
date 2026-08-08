@@ -118,11 +118,21 @@ def main(argv: list[str] | None = None) -> int:
 
 
 def _dry_run(console: Console, chart_path: Path, topics: list[str] | None, as_of: date) -> int:
+    import os
+
     from .agent import _select_topics
-    from .chart_loader import extract_relevant_context, current_vimsottari_summary
+    from .chart_loader import (
+        current_vimsottari_summary,
+        extract_dasa_section,
+        extract_relevant_context,
+        extract_varga_block,
+    )
+    from .gemini_client import DEFAULT_MODEL
 
     chart = load_chart_file(chart_path)
+    model = os.getenv("GEMINI_MODEL", DEFAULT_MODEL)
     console.print(Panel.fit("[bold]Dry run — chart parsed successfully[/bold]"))
+    console.print(f"Gemini model: {model} (override with GEMINI_MODEL)")
     console.print(f"Source: {chart.source_path}")
     console.print(f"Natal metadata: {chart.metadata}")
     if chart.secondary_text:
@@ -130,12 +140,23 @@ def _dry_run(console: Console, chart_path: Path, topics: list[str] | None, as_of
     else:
         console.print("Secondary/transit snapshot: none")
 
+    for label in ("Rasi", "D-2", "D-4", "D-9", "D-10"):
+        block = extract_varga_block(chart.natal_text, label)
+        console.print(f"Varga {label}: {'found' if block else 'missing'}")
+    vim = extract_dasa_section(chart.natal_text, "Vimsottari Dasa")
+    console.print(f"Natal Vimsottari: {'found' if vim else 'missing'}")
+
     selected = _select_topics(topics)
     for topic in selected:
         ctx = extract_relevant_context(chart, topic.key)
         if topic.key == "transits":
             ctx += "\n" + current_vimsottari_summary(chart, as_of_year=as_of.year)
-        console.print(f"- {topic.key}: context {len(ctx):,} chars")
+        has_d2 = "Varga block: D-2" in ctx
+        has_dasa = "NATAL DASA TABLES" in ctx
+        console.print(
+            f"- {topic.key}: context {len(ctx):,} chars "
+            f"(D-2={has_d2}, natal_dasa={has_dasa})"
+        )
     return 0
 
 
