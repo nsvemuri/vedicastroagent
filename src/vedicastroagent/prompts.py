@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from .gemini_client import DEFAULT_MODEL
+from .gemini_client import DEFAULT_MODEL, PREDICTION_TEMPERATURE
 
 
 PARSE_GUARDRAILS = """
@@ -99,6 +99,39 @@ Rules:
 - Sudasa / Narayana Dasa use SIGN periods (Ar, Ta, ...), not graha lords — do not mix systems.
 - Before interpreting timing, explicitly state the current/relevant MD and AD with dates.
 - If the analysis date falls between two AD start dates, the earlier AD is still running.
+"""
+
+
+PARSE_SYSTEM_INSTRUCTION = f"""You are an expert Vedic (Jyotish) chart reader for Jagannatha Hora exports.
+Your ONLY job in this step is factual extraction — no predictions, no remedies, no life advice.
+Default model: `{DEFAULT_MODEL}`. Use temperature 0 behavior: quote exactly, infer nothing beyond the data.
+
+{PARSE_GUARDRAILS}
+
+=== HOW TO READ JH ASCII DIVISIONAL CHARTS ===
+- Each varga is a South-Indian style diamond with FIXED signs:
+  top row = Pi | Ar | Ta | Ge
+  then Aq | (center label) | Cn
+  then Cp | (center label) | Le
+  bottom row = Sg | Sc | Li | Vi
+- The center text names the chart, e.g. "Rasi", "D-2 (US)", "D-4", "D-9", "D-10".
+- "As" = Lagna in that varga. Planet abbreviations: Su Mo Ma Me Ju Ve Sa Ra Ke.
+- House count is from that varga's own "As" sign.
+
+=== HOW TO READ JH DASA TABLES ===
+- Use ONLY "NATAL DASA TABLES" sections.
+- Vimshottari: leftmost planet = Mahadasa; Planet+Date pairs = Antardasa start dates.
+- Quote exact lines; state MD/AD with dates when identifiable.
+"""
+
+
+PREDICTION_SYSTEM_INSTRUCTION = SYSTEM_INSTRUCTION + """
+
+=== PREDICTION STEP RULES ===
+- A prior parse step (temperature 0) has already extracted quoted varga labels, lagna signs, and dasa lines.
+- Treat those parse facts as ground truth; build interpretation on them only.
+- Do NOT repeat the full parsing checklist — reference the supplied parse summary instead.
+- Complete sections 2–8 of the required response structure (analysis through remedies).
 """
 
 
@@ -315,6 +348,7 @@ def build_user_prompt(
     as_of: str | None = None,
     model_name: str | None = None,
 ) -> str:
+    """Legacy single-call prompt (parse + predict). Prefer build_parse_prompt + build_prediction_prompt."""
     who = native_label or "the native"
     when = as_of or "today"
     model_line = f"Model: {model_name or DEFAULT_MODEL} (Gemini 3.1 Pro family)"
@@ -344,4 +378,71 @@ Required response structure:
 
 Chart data:
 {chart_context}
+"""
+
+
+def build_parse_prompt(
+    topic: TopicSpec,
+    chart_context: str,
+    *,
+    native_label: str | None = None,
+    as_of: str | None = None,
+    model_name: str | None = None,
+) -> str:
+    who = native_label or "the native"
+    when = as_of or "today"
+    model_line = f"Model: {model_name or DEFAULT_MODEL} (parse step, temperature 0)"
+    return f"""Extract chart facts for {who}. Do NOT interpret or predict.
+
+{model_line}
+Topic context: {topic.title}
+Reference date: {when}
+
+{PARSE_GUARDRAILS}
+
+Topic-specific varga/dasa focus (for knowing what to extract):
+{topic.focus}
+
+Complete this checklist with quoted evidence from the chart data (use 'insufficient data' if missing):
+{topic.parse_checklist}
+
+Output ONLY the completed checklist and any quoted raw lines you relied on.
+No predictions, remedies, or narrative interpretation.
+
+Chart data:
+{chart_context}
+"""
+
+
+def build_prediction_prompt(
+    topic: TopicSpec,
+    parse_summary: str,
+    *,
+    native_label: str | None = None,
+    as_of: str | None = None,
+    model_name: str | None = None,
+) -> str:
+    who = native_label or "the native"
+    when = as_of or "today"
+    model_line = f"Model: {model_name or DEFAULT_MODEL} (prediction step, temperature {PREDICTION_TEMPERATURE})"
+    return f"""Interpret the following Vedic chart reading for {who}.
+
+{model_line}
+Topic: {topic.title}
+Analysis date / reference: {when}
+
+=== VERIFIED PARSE FACTS (temperature 0 — do not contradict) ===
+{parse_summary}
+
+Topic-specific focus:
+{topic.focus}
+
+Required response structure (sections 2–8 only; parse facts are already verified above):
+2. Key chart factors used
+3. Core promise / pattern
+4. Strengths and supports
+5. Challenges / cautions
+6. Timing notes (natal dasas / transits) — dates mandatory when timing is claimed
+7. Practical guidance
+8. Simple remedies (where applicable — tied to cited afflictions; skip or say none if chart is strong)
 """

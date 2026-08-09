@@ -36,7 +36,8 @@ Generation defaults (in code, not env):
 
 | Setting | Default | Why |
 |---|---|---|
-| Temperature | **0** | Factual chart/dasa parsing; no creative sampling |
+| Parse temperature | **0** | Factual varga/dasa extraction |
+| Prediction temperature | **0.05** | Interpretation/prediction (minimal sampling) |
 | Topic parallelism | **parallel** | Each life-area query is an independent Gemini call |
 
 For contributor / coding-agent guidance you can edit, see [`PROJECT_INSTRUCTIONS.md`](PROJECT_INSTRUCTIONS.md).
@@ -85,7 +86,7 @@ Pushkara Navamsha is deduced by the model from navamsa placements when JH does n
 
 ## Notes
 
-- Gemini calls use **temperature 0** so responses stay factual and parsing-focused.
+- Gemini uses a **two-phase** call per topic: parse (temperature **0**) then predict (temperature **0.05**).
 - Multi-topic runs issue **parallel** Gemini calls by default (wall time ≈ slowest topic, not sum of all). Use `--workers 1` if you hit rate limits.
 - This is interpretive decision support grounded in the supplied chart export, not a substitute for a human Jyotishi.
 - Transit detail is strongest when your export includes a recent secondary chart and current dasa tables; the agent also asks Gemini for a forward 12-month gochara/dasa synthesis from `--as-of`.

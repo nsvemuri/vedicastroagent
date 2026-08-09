@@ -19,10 +19,17 @@ def test_default_model_is_gemini_31_pro():
     assert "gemini-3.1-pro-preview" in SYSTEM_INSTRUCTION
 
 
-def test_default_temperature_is_zero():
-    from vedicastroagent.gemini_client import GeminiConfig
+def test_default_temperature_is_zero_for_parse():
+    from vedicastroagent.gemini_client import (
+        PARSE_TEMPERATURE,
+        PREDICTION_TEMPERATURE,
+        GeminiConfig,
+    )
 
-    assert GeminiConfig.temperature == 0.0
+    assert PARSE_TEMPERATURE == 0.0
+    assert PREDICTION_TEMPERATURE == 0.05
+    assert GeminiConfig.parse_temperature == 0.0
+    assert GeminiConfig.prediction_temperature == 0.05
 
 
 def test_strip_rtf_basic():
@@ -99,6 +106,19 @@ def test_topics_include_remedy_guidance():
         assert "Simple Remedies" in topic.focus
         prompt = build_user_prompt(topic, "chart...")
         assert "Simple remedies" in prompt
+
+
+def test_two_phase_prompts_exist():
+    from vedicastroagent.prompts import build_parse_prompt, build_prediction_prompt
+
+    topic = next(t for t in TOPICS if t.key == "wealth")
+    parse_p = build_parse_prompt(topic, "chart...")
+    assert "Do NOT interpret" in parse_p
+    assert "temperature 0" in parse_p
+    pred_p = build_prediction_prompt(topic, "parse facts here")
+    assert "VERIFIED PARSE FACTS" in pred_p
+    assert "sections 2–8" in pred_p
+    assert "0.05" in pred_p
 
 
 def test_resolve_workers_caps_to_topic_count():

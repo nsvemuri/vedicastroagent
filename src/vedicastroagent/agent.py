@@ -10,7 +10,14 @@ from pathlib import Path
 
 from .chart_loader import ChartDocument, current_vimsottari_summary, extract_relevant_context, load_chart_file
 from .gemini_client import GeminiClient
-from .prompts import SYSTEM_INSTRUCTION, TOPICS, TopicSpec, build_user_prompt
+from .prompts import (
+    PARSE_SYSTEM_INSTRUCTION,
+    PREDICTION_SYSTEM_INSTRUCTION,
+    TOPICS,
+    TopicSpec,
+    build_parse_prompt,
+    build_prediction_prompt,
+)
 
 # Default parallelism for multi-topic runs (I/O-bound Gemini calls).
 DEFAULT_WORKERS = 7
@@ -143,14 +150,33 @@ class VedicAstroAgent:
                 "Provide a forward 12-month outlook from this date."
             )
 
-        prompt = build_user_prompt(
+        parse_prompt = build_parse_prompt(
             topic,
             context,
             native_label=native_label,
             as_of=as_of_label,
             model_name=self.client.config.model,
         )
-        response = self.client.generate(system=SYSTEM_INSTRUCTION, user=prompt)
+        parse_summary = self.client.generate_parse(
+            system=PARSE_SYSTEM_INSTRUCTION,
+            user=parse_prompt,
+        )
+
+        prediction_prompt = build_prediction_prompt(
+            topic,
+            parse_summary,
+            native_label=native_label,
+            as_of=as_of_label,
+            model_name=self.client.config.model,
+        )
+        prediction = self.client.generate_prediction(
+            system=PREDICTION_SYSTEM_INSTRUCTION,
+            user=prediction_prompt,
+        )
+
+        response = (
+            f"## 1. Parsing checklist\n\n{parse_summary.strip()}\n\n{prediction.strip()}"
+        )
         return TopicResult(topic=topic, response=response, context_chars=len(context))
 
 
