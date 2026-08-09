@@ -7,7 +7,15 @@ from vedicastroagent.chart_loader import (
     load_chart_file,
     strip_rtf,
 )
-from vedicastroagent.gemini_client import DEFAULT_MODEL
+from vedicastroagent.llm import (
+    CLAUDE_MODEL_ALIASES,
+    DEFAULT_MODEL,
+    PARSE_TEMPERATURE,
+    PREDICTION_TEMPERATURE,
+    create_llm_client,
+    resolve_claude_model,
+    resolve_provider,
+)
 from vedicastroagent.prompts import SYSTEM_INSTRUCTION, TOPICS, build_user_prompt
 
 
@@ -20,16 +28,51 @@ def test_default_model_is_gemini_31_pro():
 
 
 def test_default_temperature_is_zero_for_parse():
-    from vedicastroagent.gemini_client import (
-        PARSE_TEMPERATURE,
-        PREDICTION_TEMPERATURE,
-        GeminiConfig,
-    )
+    from vedicastroagent.gemini_client import GeminiConfig
 
     assert PARSE_TEMPERATURE == 0.0
     assert PREDICTION_TEMPERATURE == 0.05
     assert GeminiConfig.parse_temperature == 0.0
     assert GeminiConfig.prediction_temperature == 0.05
+
+
+def test_claude_aliases_resolve():
+    assert set(CLAUDE_MODEL_ALIASES) == {"sonnet", "opus", "mythos"}
+    assert resolve_claude_model("sonnet") == "claude-sonnet-5"
+    assert resolve_claude_model("opus") == "claude-opus-5"
+    assert resolve_claude_model("mythos") == "claude-mythos-5"
+    assert resolve_claude_model("claude-sonnet-5") == "claude-sonnet-5"
+
+
+def test_resolve_provider_aliases():
+    assert resolve_provider("gemini") == "gemini"
+    assert resolve_provider("google") == "gemini"
+    assert resolve_provider("claude") == "claude"
+    assert resolve_provider("anthropic") == "claude"
+
+
+def test_create_llm_client_requires_matching_key(monkeypatch):
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+    monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.delenv("CLAUDE_API_KEY", raising=False)
+    monkeypatch.delenv("LLM_PROVIDER", raising=False)
+
+    try:
+        create_llm_client(provider="gemini")
+        raised = False
+    except RuntimeError as exc:
+        raised = True
+        assert "GEMINI_API_KEY" in str(exc)
+    assert raised
+
+    try:
+        create_llm_client(provider="claude", model="sonnet")
+        raised = False
+    except RuntimeError as exc:
+        raised = True
+        assert "ANTHROPIC_API_KEY" in str(exc) or "CLAUDE_API_KEY" in str(exc)
+    assert raised
 
 
 def test_strip_rtf_basic():

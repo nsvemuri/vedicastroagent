@@ -1,6 +1,11 @@
 # Vedic Astrology Agent
 
-CLI agent that reads a **Jagannatha Hora** natal chart export (plain text or RTF, including `.txt` files that are actually RTF) and runs focused **Gemini 3.1 Pro** (`gemini-3.1-pro-preview` by default) analyses for:
+CLI agent that reads a **Jagannatha Hora** natal chart export (plain text or RTF, including `.txt` files that are actually RTF) and runs focused analyses with either:
+
+- **Gemini 3.1 Pro** (`gemini-3.1-pro-preview` by default), or
+- **Claude** — pick **`sonnet`**, **`opus`**, or **`mythos`**
+
+Topics:
 
 - Career
 - Wealth (Hora **D-2** and Chaturthamsa **D-4**)
@@ -17,28 +22,35 @@ It uses the rich JH dump you already have: D-1, planetary longitudes/nakshatra/p
 ```bash
 cd vedicastroagent
 python3 -m venv .venv
-source .venv/bin/activate
+source .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install -e .
 
 cp .env.example .env
-# put your key from https://aistudio.google.com/apikey into .env
 ```
+
+Put **only the key for the provider you use** in `.env`:
+
+- Gemini-only users: set `GEMINI_API_KEY`
+- Claude-only users: set `ANTHROPIC_API_KEY` and `LLM_PROVIDER=claude` (or pass `--provider claude`)
 
 Environment variables:
 
 | Variable | Purpose |
 |---|---|
-| `GEMINI_API_KEY` | Required (or `GOOGLE_API_KEY`) |
-| `GEMINI_MODEL` | Optional model id; **default `gemini-3.1-pro-preview`** (Gemini 3.1 Pro) |
+| `LLM_PROVIDER` | `gemini` or `claude` (optional if only one key is present) |
+| `GEMINI_API_KEY` | Required for Gemini (or `GOOGLE_API_KEY`) |
+| `GEMINI_MODEL` | Optional Gemini model id; default `gemini-3.1-pro-preview` |
+| `ANTHROPIC_API_KEY` | Required for Claude (or `CLAUDE_API_KEY`) |
+| `CLAUDE_MODEL` | Claude alias `sonnet` / `opus` / `mythos`, or a full id like `claude-sonnet-5` |
 | `VEDIC_MAX_WORKERS` | Optional parallel topic workers; **default `7`** (use `1` for sequential) |
 
-Generation defaults (in code, not env):
+Generation defaults (shared by both providers):
 
 | Setting | Default | Why |
 |---|---|---|
 | Parse temperature | **0** | Factual varga/dasa extraction |
 | Prediction temperature | **0.05** | Interpretation/prediction (minimal sampling) |
-| Topic parallelism | **parallel** | Each life-area query is an independent Gemini call |
+| Topic parallelism | **parallel** | Each life-area query is an independent LLM call |
 
 For contributor / coding-agent guidance you can edit, see [`PROJECT_INSTRUCTIONS.md`](PROJECT_INSTRUCTIONS.md).
 
@@ -48,8 +60,13 @@ For contributor / coding-agent guidance you can edit, see [`PROJECT_INSTRUCTIONS
 # Parse only (no API calls)
 vedicastroagent ~/Desktop/Srinu.txt --dry-run
 
-# Full multi-topic reading
-vedicastroagent ~/Desktop/Srinu.txt --name Srinu
+# Gemini (default when GEMINI_API_KEY is set)
+vedicastroagent ~/Desktop/Srinu.txt --name Srinu --provider gemini
+
+# Claude — pick sonnet, opus, or mythos
+vedicastroagent ~/Desktop/Srinu.txt --name Srinu --provider claude --model sonnet
+vedicastroagent ~/Desktop/Srinu.txt --provider claude --model opus
+vedicastroagent ~/Desktop/Srinu.txt --provider claude --model mythos
 
 # Selected topics
 vedicastroagent ~/Desktop/Srinu.txt -t career wealth marriage transits
@@ -57,7 +74,7 @@ vedicastroagent ~/Desktop/Srinu.txt -t career wealth marriage transits
 # Custom output path + transit reference date
 vedicastroagent ~/Desktop/Srinu.txt -o output/srinu.md --as-of 2026-08-08
 
-# Parallelism (topic Gemini calls run concurrently by default)
+# Parallelism (topic LLM calls run concurrently by default)
 vedicastroagent ~/Desktop/Srinu.txt -j 7          # default-ish: up to 7 parallel topics
 vedicastroagent ~/Desktop/Srinu.txt --workers 1   # sequential (debugging / rate limits)
 ```
@@ -86,7 +103,8 @@ Pushkara Navamsha is deduced by the model from navamsa placements when JH does n
 
 ## Notes
 
-- Gemini uses a **two-phase** call per topic: parse (temperature **0**) then predict (temperature **0.05**).
-- Multi-topic runs issue **parallel** Gemini calls by default (wall time ≈ slowest topic, not sum of all). Use `--workers 1` if you hit rate limits.
+- Each topic uses a **two-phase** call: parse (temperature **0**) then predict (temperature **0.05**), for both Gemini and Claude.
+- Multi-topic runs issue **parallel** LLM calls by default (wall time ≈ slowest topic, not sum of all). Use `--workers 1` if you hit rate limits.
+- Gemini-only and Claude-only setups are both supported; you do not need both API keys.
 - This is interpretive decision support grounded in the supplied chart export, not a substitute for a human Jyotishi.
-- Transit detail is strongest when your export includes a recent secondary chart and current dasa tables; the agent also asks Gemini for a forward 12-month gochara/dasa synthesis from `--as-of`.
+- Transit detail is strongest when your export includes a recent secondary chart and current dasa tables; the agent also asks the model for a forward 12-month gochara/dasa synthesis from `--as-of`.

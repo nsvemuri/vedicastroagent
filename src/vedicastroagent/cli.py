@@ -15,15 +15,17 @@ from rich.panel import Panel
 from . import __version__
 from .agent import VedicAstroAgent
 from .chart_loader import load_chart_file
+from .llm import CLAUDE_MODEL_ALIASES, PROVIDERS, create_llm_client, resolve_provider
 from .prompts import TOPICS
 
 
 def build_parser() -> argparse.ArgumentParser:
     topic_keys = [t.key for t in TOPICS]
+    claude_aliases = ", ".join(CLAUDE_MODEL_ALIASES)
     parser = argparse.ArgumentParser(
         prog="vedicastroagent",
         description=(
-            "Analyze a Jagannatha Hora chart text/RTF export with Gemini Pro across "
+            "Analyze a Jagannatha Hora chart text/RTF export with Gemini or Claude across "
             "career, wealth (D2/D4), marriage, children, education, spiritual progress, "
             "and a 1-year transit outlook."
         ),
@@ -55,9 +57,29 @@ def build_parser() -> argparse.ArgumentParser:
         help="Reference date for transit outlook (YYYY-MM-DD). Defaults to today.",
     )
     parser.add_argument(
+        "--provider",
+        choices=PROVIDERS,
+        default=None,
+        help=(
+            "LLM provider: gemini or claude. "
+            "Default: LLM_PROVIDER env, else gemini if GEMINI_API_KEY is set, "
+            "or claude if only ANTHROPIC_API_KEY is set."
+        ),
+    )
+    parser.add_argument(
+        "--model",
+        default=None,
+        help=(
+            "Model id or Claude alias. "
+            f"Claude aliases: {claude_aliases}. "
+            "Gemini default: gemini-3.1-pro-preview (or GEMINI_MODEL). "
+            "Claude default: sonnet (or CLAUDE_MODEL)."
+        ),
+    )
+    parser.add_argument(
         "--dry-run",
         action="store_true",
-        help="Parse the chart and print extracted metadata/context sizes without calling Gemini.",
+        help="Parse the chart and print extracted metadata/context sizes without calling an LLM.",
     )
     parser.add_argument(
         "-j",
@@ -66,7 +88,7 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         metavar="N",
         help=(
-            "Max parallel Gemini topic queries (default: 7, or VEDIC_MAX_WORKERS). "
+            "Max parallel topic queries (default: 7, or VEDIC_MAX_WORKERS). "
             "Use 1 for sequential runs."
         ),
     )
@@ -93,10 +115,15 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         if args.dry_run:
-            return _dry_run(console, chart_path, args.topics, as_of)
+            return _dry_run(console, chart_path, args.topics, as_of, args.provider, args.model)
 
         console.print(Panel.fit(f"Loading chart: [bold]{chart_path}[/bold]"))
-        agent = VedicAstroAgent()
+        client = create_llm_client(provider=args.provider, model=args.model)
+        console.print(
+            f"Provider: [bold]{client.config.provider}[/bold]  "
+            f"Model: [bold]{client.config.model}[/bold]"
+        )
+        agent = VedicAstroAgent(client=client)
         report = agent.analyze_file(
             chart_path,
             topics=args.topics,
@@ -129,9 +156,14 @@ def main(argv: list[str] | None = None) -> int:
     return 0
 
 
-def _dry_run(console: Console, chart_path: Path, topics: list[str] | None, as_of: date) -> int:
-    import os
-
+def _dry_run(
+    console: Console,
+    chart_path: Path,
+    topics: list[str] | None,
+    as_of: date,
+    provider: str | None,
+    model: str | None,
+) -> int:
     from .agent import _select_topics
     from .chart_loader import (
         current_vimsottari_summary,
@@ -139,12 +171,31 @@ def _dry_run(console: Console, chart_path: Path, topics: list[str] | None, as_of
         extract_relevant_context,
         extract_varga_block,
     )
-    from .gemini_client import DEFAULT_MODEL
+    from .llm import create_llm_client
 
     chart = load_chart_file(chart_path)
-    model = os.getenv("GEMINI_MODEL", DEFAULT_MODEL)
+    chosen = resolve_provider(provider)
+    # Resolve model label without requiring an API key for dry-run display.
+    try:
+        client = create_llm_client(provider=provider, model=model)
+        model_label = client.config.model
+        provider_label = client.config.provider
+    except RuntimeError:
+        provider_label = chosen
+        if chosen == "claude":
+            from .llm import resolve_claude_model
+
+            model_label = resolve_claude_model(model)
+        else:
+            import os
+
+            from .llm import DEFAULT_GEMINI_MODEL
+
+            model_label = model or os.getenv("GEMINI_MODEL", DEFAULT_GEMINI_MODEL)
+
     console.print(Panel.fit("[bold]Dry run — chart parsed successfully[/bold]"))
-    console.print(f"Gemini model: {model} (override with GEMINI_MODEL)")
+    console.print(f"Provider: {provider_label}")
+    console.print(f"Model: {model_label}")
     console.print(f"Source: {chart.source_path}")
     console.print(f"Natal metadata: {chart.metadata}")
     if chart.secondary_text:

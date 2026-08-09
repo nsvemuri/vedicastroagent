@@ -8,20 +8,37 @@ Cursor / coding agents should treat this as the project brief.
 Build a CLI Vedic astrology agent that:
 
 1. Accepts a Jagannatha Hora chart export path (`.txt` / `.rtf`, including RTF saved as `.txt`).
-2. Calls **Gemini 3.1 Pro** for multiple life areas.
+2. Calls **Gemini** or **Claude** for multiple life areas (user chooses one provider).
 3. Uses natal chart data (Vargas, dasas, karakas, ashtakavarga, shadbala, upagrahas).
 4. May use a secondary chart block only as a **transit/gochara snapshot** (planet positions), never as natal dasa ownership.
 
-## Gemini model
+## LLM providers
+
+### Gemini
 
 - Product name: **Gemini 3.1 Pro**
 - Default API model id: **`gemini-3.1-pro-preview`**
-- Defined in `src/vedicastroagent/gemini_client.py` as `DEFAULT_MODEL`
-- Runtime override: env var `GEMINI_MODEL`
 - Auth: `GEMINI_API_KEY` or `GOOGLE_API_KEY`
-- Default sampling: **parse temperature 0**, **prediction temperature 0.05** (do not raise unless the user explicitly asks)
+- Model override: `GEMINI_MODEL` or `--model`
 
-When docs or CLI text say “Gemini Pro” / “Gemini 3.1 Pro”, they mean this default unless overridden.
+### Claude
+
+- Aliases: **`sonnet`** → `claude-sonnet-5`, **`opus`** → `claude-opus-5`, **`mythos`** → `claude-mythos-5`
+- Auth: `ANTHROPIC_API_KEY` or `CLAUDE_API_KEY`
+- Model override: `CLAUDE_MODEL` or `--model sonnet|opus|mythos|<full-id>`
+
+### Provider selection
+
+- CLI: `--provider gemini|claude`
+- Env: `LLM_PROVIDER` (or `VEDIC_PROVIDER`)
+- Auto: if only Claude key is set → `claude`; otherwise default **`gemini`**
+- Users may configure **only Gemini** or **only Claude** — do not require both keys.
+
+### Sampling (shared)
+
+- Parse temperature: **0**
+- Prediction temperature: **0.05**
+- Defined in `src/vedicastroagent/llm.py`
 
 ### Why prompts are strict
 
@@ -36,19 +53,22 @@ Incorrect D-2/D-4/dasa readings can come from **context extraction bugs** or fro
 
 | Path | Role |
 |---|---|
-| `src/vedicastroagent/cli.py` | CLI entrypoint |
-| `src/vedicastroagent/agent.py` | Multi-topic orchestration (parallel Gemini calls by default) |
+| `src/vedicastroagent/cli.py` | CLI entrypoint (`--provider`, `--model`) |
+| `src/vedicastroagent/agent.py` | Multi-topic orchestration (parallel LLM calls by default) |
+| `src/vedicastroagent/llm.py` | Provider protocol, aliases, `create_llm_client()` |
+| `src/vedicastroagent/gemini_client.py` | Gemini API wrapper |
+| `src/vedicastroagent/claude_client.py` | Claude API wrapper |
 | `src/vedicastroagent/chart_loader.py` | RTF/text parse, varga/dasa extraction |
 | `src/vedicastroagent/prompts.py` | System + per-topic parse checklists / focus |
-| `src/vedicastroagent/gemini_client.py` | Gemini API wrapper + `DEFAULT_MODEL` |
-| `tests/` | Parser/context/prompt tests |
+| `tests/` | Parser/context/prompt/provider tests |
 | `README.md` | User-facing usage |
 
 ## Critical accuracy rules (do not regress)
 
-- Default model must remain **`gemini-3.1-pro-preview`** unless the user explicitly changes it.
+- Default Gemini model must remain **`gemini-3.1-pro-preview`** unless the user explicitly changes it.
+- Claude aliases must remain **`sonnet` / `opus` / `mythos`**.
 - Default temperature must remain **0 for parse** and **0.05 for prediction** unless the user explicitly asks to change it.
-- Each topic uses two Gemini calls: parse (checklist, temp 0) then predict (sections 2–8, temp 0.05).
+- Each topic uses two LLM calls: parse (checklist, temp 0) then predict (sections 2–8, temp 0.05).
 - Do **not** match bare `"Hora"` for wealth — it collides with `Hora Lord` / `Hora Lagna`. Use labeled **`D-2`** / **`D-4`** ASCII blocks.
 - Extract full JH diamond charts via `extract_varga_block()`.
 - Extract natal dasas via `extract_dasa_section()`; stop at the next dasa header.
@@ -77,7 +97,7 @@ Add items under **Requested changes** below. Be concrete: file/area, desired beh
 
 - Prefer small, focused diffs; avoid drive-by refactors.
 - Keep CLI usable with `--dry-run` (no API key required for parse checks).
-- Add/adjust tests in `tests/` when changing chart parsing or default model id.
+- Add/adjust tests in `tests/` when changing chart parsing, providers, or default model ids.
 - Do not commit secrets (`.env`).
 - Do not invent ephemeris precision the export does not contain.
 - When tightening astrology accuracy, prefer prompt/checklist + extraction fixes; keep parse temperature at **0**.
@@ -90,11 +110,12 @@ After changes:
 source .venv/bin/activate
 pytest -q
 vedicastroagent ~/Desktop/Srinu.txt --dry-run
-vedicastroagent ~/Desktop/Srinu.txt -t wealth --name Srinu
+vedicastroagent ~/Desktop/Srinu.txt --dry-run --provider claude --model sonnet
+vedicastroagent ~/Desktop/Srinu.txt -t wealth --name Srinu --provider gemini
 ```
 
 Confirm dry-run shows:
 
-- `Gemini model: gemini-3.1-pro-preview`
+- Provider + model labels
 - `Varga D-2: found`, `Varga D-4: found`
 - `Natal Vimsottari: found`

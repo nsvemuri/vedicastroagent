@@ -5,11 +5,12 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "vedicastroagent"
 version = "0.1.0"
-description = "Vedic Astrology agent that analyzes Jagannatha Hora chart exports with Gemini Pro"
+description = "Vedic Astrology agent that analyzes Jagannatha Hora chart exports with Gemini or Claude"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
   "google-genai>=1.0.0",
+  "anthropic>=0.40.0",
   "python-dotenv>=1.0.0",
   "rich>=13.0.0",
 ]

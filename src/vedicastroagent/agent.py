@@ -1,4 +1,4 @@
-"""Orchestrate multi-topic Vedic analyses with Gemini."""
+"""Orchestrate multi-topic Vedic analyses with Gemini or Claude."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ from datetime import date
 from pathlib import Path
 
 from .chart_loader import ChartDocument, current_vimsottari_summary, extract_relevant_context, load_chart_file
-from .gemini_client import GeminiClient
+from .llm import LLMClient, create_llm_client
 from .prompts import (
     PARSE_SYSTEM_INSTRUCTION,
     PREDICTION_SYSTEM_INSTRUCTION,
@@ -19,7 +19,7 @@ from .prompts import (
     build_prediction_prompt,
 )
 
-# Default parallelism for multi-topic runs (I/O-bound Gemini calls).
+# Default parallelism for multi-topic runs (I/O-bound LLM calls).
 DEFAULT_WORKERS = 7
 
 
@@ -35,6 +35,7 @@ class AnalysisReport:
     chart: ChartDocument
     results: list[TopicResult] = field(default_factory=list)
     model: str = ""
+    provider: str = ""
 
     def to_markdown(self) -> str:
         meta = self.chart.metadata
@@ -42,6 +43,7 @@ class AnalysisReport:
             f"# Vedic Astrology Report",
             "",
             f"- Source: `{self.chart.source_path}`",
+            f"- Provider: `{self.provider}`",
             f"- Model: `{self.model}`",
             f"- Birth date: {meta.get('date', 'unknown')}",
             f"- Birth time: {meta.get('time', 'unknown')}",
@@ -61,8 +63,8 @@ class AnalysisReport:
 
 
 class VedicAstroAgent:
-    def __init__(self, client: GeminiClient | None = None) -> None:
-        self.client = client or GeminiClient()
+    def __init__(self, client: LLMClient | None = None) -> None:
+        self.client = client or create_llm_client()
 
     def analyze_file(
         self,
@@ -94,7 +96,11 @@ class VedicAstroAgent:
         selected = _select_topics(topics)
         as_of = as_of or date.today()
         as_of_label = as_of.isoformat()
-        report = AnalysisReport(chart=chart, model=self.client.config.model)
+        report = AnalysisReport(
+            chart=chart,
+            model=self.client.config.model,
+            provider=self.client.config.provider,
+        )
         workers = _resolve_workers(max_workers, topic_count=len(selected))
 
         if workers <= 1 or len(selected) == 1:
@@ -110,7 +116,7 @@ class VedicAstroAgent:
                 )
             return report
 
-        # Parallel Gemini calls; preserve canonical topic order in the report.
+        # Parallel LLM calls; preserve canonical topic order in the report.
         indexed: dict[int, TopicResult] = {}
         with ThreadPoolExecutor(max_workers=workers) as pool:
             futures = {

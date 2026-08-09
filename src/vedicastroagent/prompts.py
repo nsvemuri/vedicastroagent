@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from .gemini_client import DEFAULT_MODEL, PREDICTION_TEMPERATURE
+from .llm import DEFAULT_MODEL, PREDICTION_TEMPERATURE
 
 
 PARSE_GUARDRAILS = """
@@ -36,8 +36,8 @@ Models often misread JH ASCII Vargas and dasa tables. Prevent that as follows:
 
 SYSTEM_INSTRUCTION = f"""You are an expert Vedic (Jyotish) astrologer trained in Parashari, Jaimini,
 and classical dasa techniques. You analyze Jagannatha Hora (JH) chart exports carefully.
-Default runtime model id: `{DEFAULT_MODEL}` (Gemini 3.1 Pro). The user prompt may name the
-actual model used for this call.
+Default Gemini model id: `{DEFAULT_MODEL}`. Claude users may select sonnet/opus/mythos.
+The user prompt names the actual model used for this call.
 
 Rules:
 - Base conclusions ONLY on the supplied chart data. Quote houses, lords, varga placements,

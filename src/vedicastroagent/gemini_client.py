@@ -8,37 +8,56 @@ from dataclasses import dataclass
 from google import genai
 from google.genai import types
 
+from .llm import (
+    DEFAULT_GEMINI_MODEL,
+    LLMClientConfig,
+    PARSE_TEMPERATURE,
+    PREDICTION_TEMPERATURE,
+)
 
-# Gemini 3.1 Pro (API model id). Override with GEMINI_MODEL if needed.
-DEFAULT_MODEL = "gemini-3.1-pro-preview"
-
-# Parsing must stay deterministic; prediction uses minimal sampling to reduce truncation stalls.
-PARSE_TEMPERATURE = 0.0
-PREDICTION_TEMPERATURE = 0.05
+# Backward-compatible exports.
+DEFAULT_MODEL = DEFAULT_GEMINI_MODEL
 
 
 @dataclass
 class GeminiConfig:
     api_key: str | None = None
-    model: str = DEFAULT_MODEL
+    model: str = DEFAULT_GEMINI_MODEL
     parse_temperature: float = PARSE_TEMPERATURE
     prediction_temperature: float = PREDICTION_TEMPERATURE
     parse_max_output_tokens: int = 4096
     max_output_tokens: int = 16384
 
+    @property
+    def provider(self) -> str:
+        return "gemini"
+
 
 class GeminiClient:
     def __init__(self, config: GeminiConfig | None = None) -> None:
-        self.config = config or GeminiConfig()
-        api_key = self.config.api_key or os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
+        self._gemini = config or GeminiConfig()
+        api_key = (
+            self._gemini.api_key
+            or os.getenv("GEMINI_API_KEY")
+            or os.getenv("GOOGLE_API_KEY")
+        )
         if not api_key:
             raise RuntimeError(
                 "Missing API key. Set GEMINI_API_KEY (or GOOGLE_API_KEY) in the environment "
                 "or a .env file. See .env.example."
             )
-        self.config.api_key = api_key
-        self.config.model = os.getenv("GEMINI_MODEL", self.config.model)
+        self._gemini.api_key = api_key
+        if self._gemini.model == DEFAULT_GEMINI_MODEL:
+            self._gemini.model = os.getenv("GEMINI_MODEL", self._gemini.model)
         self._client = genai.Client(api_key=api_key)
+        self.config = LLMClientConfig(
+            provider="gemini",
+            model=self._gemini.model,
+            parse_temperature=self._gemini.parse_temperature,
+            prediction_temperature=self._gemini.prediction_temperature,
+            parse_max_output_tokens=self._gemini.parse_max_output_tokens,
+            max_output_tokens=self._gemini.max_output_tokens,
+        )
 
     def generate(
         self,
