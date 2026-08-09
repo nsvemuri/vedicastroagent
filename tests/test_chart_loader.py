@@ -93,6 +93,14 @@ def test_all_topics_have_parse_checklists():
         assert topic.key in {"career", "wealth", "marriage", "children", "education", "spiritual", "transits"}
 
 
+def test_topics_include_remedy_guidance():
+    assert "SIMPLE REMEDIES" in SYSTEM_INSTRUCTION
+    for topic in TOPICS:
+        assert "Simple Remedies" in topic.focus
+        prompt = build_user_prompt(topic, "chart...")
+        assert "Simple remedies" in prompt
+
+
 def test_resolve_workers_caps_to_topic_count():
     from vedicastroagent.agent import DEFAULT_WORKERS, _resolve_workers
 

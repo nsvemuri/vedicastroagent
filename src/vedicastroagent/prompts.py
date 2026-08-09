@@ -51,6 +51,19 @@ Rules:
 - Write in clear English with short section headings and bullet points.
 - Accuracy of varga/dasa reading beats eloquence. If unsure, quote the raw cell/line.
 
+=== SIMPLE REMEDIES (when applicable) ===
+- Suggest remedies ONLY when the chart shows clear affliction, delay, or repeated challenge
+  for that life area — not when the topic is already strongly supported.
+- Tie every remedy to a specific factor you cited (weak lord, afflicted karaka, difficult dasa).
+- Prefer simple, classical, low-cost measures: mantra/japa, weekly vrata or fasting on the
+  planet's day, dana (charity) of the planet's items, seva, discipline, and respectful conduct
+  toward the karaka's significations (e.g. guru for Jupiter, spouse for Venus/DK).
+- Do not prescribe gemstones, expensive yajnas, or fear-based rituals unless the chart strongly
+  warrants it — and then mention consulting a qualified Jyotishi/priest.
+- Remedies are supportive adjuncts, not substitutes for effort, skill-building, therapy, or
+  professional advice (medical, legal, financial).
+- Keep remedies practical (1–4 bullets); skip the section or say "none needed" if promise is strong.
+
 {PARSE_GUARDRAILS}
 
 === HOW TO READ JH ASCII DIVISIONAL CHARTS ===
@@ -118,7 +131,12 @@ TOPICS: list[TopicSpec] = [
             "Mercury/Jupiter for advising/consulting. In D-10, the 1st/6th/10th axes dictate work environments.\n"
             "Primary Vargas: natal Rasi + ASCII block labeled D-10 / Dasamsa ONLY for dasamsa claims.\n"
             "Also use Hora/Ghati Lagna cues, shadbala, 10th ashtakavarga, NATAL Vimshottari (Narayana optional).\n"
-            "Do not cite D-9/D-2/D-4 placements as career proof unless clearly secondary support."
+            "Do not cite D-9/D-2/D-4 placements as career proof unless clearly secondary support.\n"
+            "Simple Remedies (if 10th/6th lords, Sun, Mars, Saturn, or AmK are weak/afflicted): "
+            "Sunday Surya respect (early rising, Surya Namaskar, avoid ego clashes with authority); "
+            "Tuesday/Mars — disciplined action, Hanuman stuti for courage; Saturday/Saturn — steady work, "
+            "service to workers/elderly, avoid shortcuts; Mercury/Jupiter weak — Wednesday/Thursday study "
+            "and skill upgrade; honor the AmK significations in daily work; charity on the afflicted lord's day."
         ),
     ),
     TopicSpec(
@@ -144,7 +162,12 @@ TOPICS: list[TopicSpec] = [
             "3) Do not swap D-2 and D-4 conclusions.\n"
             "4) Timing only from NATAL Vimshottari + Sudasa with quoted dates.\n"
             "5) Separate earned income vs savings vs windfalls vs real-estate/assets.\n"
-            "If D-2 or D-4 block is absent, say so and limit claims accordingly."
+            "If D-2 or D-4 block is absent, say so and limit claims accordingly.\n"
+            "Simple Remedies (if 2nd/11th/4th lords, Venus, Jupiter, or Indu/Sree Lagna factors are weak): "
+            "Friday Venus — cleanliness, harmony, white/sweet charity; Thursday Jupiter — guru/teacher respect, "
+            "donation of yellow items or education support; Lakshmi/Kubera gratitude on Fridays; avoid wasteful "
+            "spending during afflicted 2nd/12th links; Mars/Venus for property/vehicles — disciplined savings, "
+            "avoid impulsive purchases; dana on the day of the weakest dhana-yoga lord cited."
         ),
     ),
     TopicSpec(
@@ -166,7 +189,13 @@ TOPICS: list[TopicSpec] = [
             "Primary Vargas: natal Rasi 7th + ASCII D-9 / Navamsa block only for navamsa claims.\n"
             "Longitude-table Navamsa column may support dignity notes but does not replace the D-9 diamond.\n"
             "Use DK, Gulika/Mandi if relevant; NATAL Vimshottari only for timing.\n"
-            "Pushkara Navamsha: deduce for Venus/DK/7th lord/lagna lord only when navamsa data exists."
+            "Pushkara Navamsha: deduce for Venus/DK/7th lord/lagna lord only when navamsa data exists.\n"
+            "Simple Remedies (if 7th lord, Venus, DK, or UL/2nd-from-UL are afflicted — not for strong charts): "
+            "Friday Venus — kindness, white flowers, avoid harsh speech in partnership; Jupiter (especially for "
+            "women) — Thursday charity, respect for elders/guru; Kuja Dosha — Tuesday Hanuman worship, patience, "
+            "avoid unnecessary conflict; Rahu/Ketu on 7th axis — simplicity, honesty, avoid deception; "
+            "Gulika/Mandi — moderation, avoid marriage decisions in haste during afflicted periods; "
+            "strengthen 2nd-from-UL significations (family harmony, truthful speech)."
         ),
     ),
     TopicSpec(
@@ -187,7 +216,12 @@ TOPICS: list[TopicSpec] = [
             "Beeja/Kshetra sphuta indicates delay or requires remedies.\n"
             "Primary Vargas: natal Rasi 5th + ASCII D-7 / Saptamsa ONLY for saptamsa claims.\n"
             "Do not use D-5/D-9 as a substitute for D-7.\n"
-            "Also PK, Jupiter, Beeja/Kshetra sphuta if present; NATAL Vimshottari for timing."
+            "Also PK, Jupiter, Beeja/Kshetra sphuta if present; NATAL Vimshottari for timing.\n"
+            "Simple Remedies (only if 5th/7th-from-D-7, Jupiter, or PK show delay/affliction — be gentle): "
+            "Thursday Jupiter — Santana Gopal mantra or Vishnu/Jupiter stuti, charity for children's welfare; "
+            "respect Putrakaraka significations (guidance, protection of children); Beeja/Kshetra imbalance — "
+            "simple vrata or charity on the day of the afflicted sphuta lord if cited; avoid alarmist or "
+            "coercive remedies; emphasize patience during difficult 5th-lord or Saturn/Rahu dasa windows."
         ),
     ),
     TopicSpec(
@@ -208,7 +242,11 @@ TOPICS: list[TopicSpec] = [
             "evaluate 4th, 5th, and 9th axes. Mention technical (Mars/Ketu/Saturn) vs traditional/humanities (Jupiter/Venus) inclinations.\n"
             "Primary Vargas: natal Rasi 4th/5th/9th + ASCII D-24 (Siddhamsa) when present; D-5 only as support.\n"
             "Do not invent a D-24 lagna if the block is missing.\n"
-            "Use Mercury/Jupiter + NATAL Vimshottari education windows."
+            "Use Mercury/Jupiter + NATAL Vimshottari education windows.\n"
+            "Simple Remedies (if Mercury/Jupiter or 4th/5th/9th lords are weak): "
+            "Wednesday Mercury — Saraswati respect, regular study schedule, donate books/stationery; "
+            "Thursday Jupiter — guru seva, humility in learning; discipline over distraction during "
+            "afflicted Mercury/Rahu periods; strengthen the house lord of the weakest education axis cited."
         ),
     ),
     TopicSpec(
@@ -230,7 +268,12 @@ TOPICS: list[TopicSpec] = [
             "Pravrajya (renunciation) yogas or heavy satvic planetary influence.\n"
             "Use AK, Ketu, Rasi 12th/9th/5th, ASCII D-9; include D-20/D-60 only if those blocks exist.\n"
             "Do not mix D-20 planets into D-60 claims or vice versa.\n"
-            "Timing: NATAL Vimshottari; Moola Dasa only if the Moola table is present and quoted."
+            "Timing: NATAL Vimshottari; Moola Dasa only if the Moola table is present and quoted.\n"
+            "Simple Remedies (match sadhana to AK, 9th/12th lords, Ketu/Jupiter — householder-friendly unless "
+            "Pravrajya is clear): daily short japa of the Ishta Devata or AK lord's mantra; Thursday guru "
+            "respect; Ketu — meditation, simplicity, reduce excessive material attachment; 5th house — "
+            "mantra/bhakti path; 12th — charity, pilgrimage when feasible; avoid prescribing extreme "
+            "renunciation unless the chart strongly supports it."
         ),
     ),
     TopicSpec(
@@ -253,7 +296,12 @@ TOPICS: list[TopicSpec] = [
             "HARD RULE: never take Vimshottari/Sudasa/Narayana from the secondary chart.\n"
             "Timing backbone = NATAL Vimshottari MD/AD with quoted dates; optional natal Narayana/Sudasa.\n"
             "Cover Jupiter, Saturn, Rahu/Ketu, Mars relative to natal lagna/Moon/AL.\n"
-            "Prefer quarterly themes unless month-level evidence is strong."
+            "Prefer quarterly themes unless month-level evidence is strong.\n"
+            "Simple Remedies (timed to difficult transit/dasa windows only): Sade Sati/Ashtama Shani — "
+            "Saturday Saturn seva, Shani stuti, discipline, avoid arrogance; afflicted Rahu/Ketu transit — "
+            "charity, simplicity, avoid risky shortcuts; harsh Mars transit — Tuesday patience, avoid anger; "
+            "benefic Jupiter transit — gratitude, dharma-aligned action to maximize the window; "
+            "always link remedy to the specific transit + running MD/AD cited."
         ),
     ),
 ]
@@ -292,6 +340,7 @@ Required response structure:
 5. Challenges / cautions
 6. Timing notes (natal dasas / transits) — dates mandatory when timing is claimed
 7. Practical guidance
+8. Simple remedies (where applicable — tied to cited afflictions; skip or say none if chart is strong)
 
 Chart data:
 {chart_context}
