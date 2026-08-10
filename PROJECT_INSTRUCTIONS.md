@@ -51,6 +51,7 @@ Incorrect D-2/D-4/dasa readings can come from **context extraction bugs** or fro
 - Prediction prompts must apply classical vitals when supported: Kendra/Trikona/Dusthana/Upachaya, Yogakaraka, yogas, dignities, aspects, functional benefic/malefic, **nakshatra/pada/nakshatra-lord/deity**, gandanta, and selective varga deities (`CLASSICAL_VEDIC_FRAMEWORK` in `prompts.py`).
 - Prediction tone must be **fact-first**: no sugarcoating, no overweighting positives, no diplomatic vagueness on negatives (`FACTUALITY & TONE` in `prompts.py`).
 - Prediction prompts must include the subject's **current age** (from natal `Date:` vs `--as-of` / today) and age-aware timing/guidance.
+- Chart load must compute and inject **NATAL RASI CORE** (Lagna, Moon, graha houses, topic house-lords) into parse context and prediction prompts; transit topics also get **TRANSIT / GOCHARA CORE**. Prediction must not claim these D-1 facts are missing when the payload is present.
 
 ## Code map
 

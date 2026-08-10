@@ -12,6 +12,8 @@ from .chart_loader import (
     ChartDocument,
     current_vimsottari_summary,
     extract_relevant_context,
+    format_natal_rasi_core,
+    format_transit_rasi_core,
     load_chart_file,
     subject_age_as_of,
 )
@@ -171,6 +173,8 @@ class VedicAstroAgent:
         subject_age: int | None,
     ) -> TopicResult:
         context = extract_relevant_context(chart, topic.key)
+        natal_core = format_natal_rasi_core(chart, topic=topic.key)
+        transit_core = format_transit_rasi_core(chart)
         if topic.key == "transits":
             dasa = current_vimsottari_summary(chart, as_of_year=as_of_year)
             if dasa:
@@ -200,6 +204,8 @@ class VedicAstroAgent:
             model_name=self.client.config.model,
             birth_date=birth_date,
             subject_age=subject_age,
+            natal_core_payload=natal_core,
+            transit_core_payload=transit_core if topic.key == "transits" else None,
         )
         prediction = self.client.generate_prediction(
             system=PREDICTION_SYSTEM_INSTRUCTION,

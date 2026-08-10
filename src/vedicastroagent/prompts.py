@@ -120,6 +120,13 @@ Default model: `{DEFAULT_MODEL}`. Use temperature 0 behavior: quote exactly, inf
 
 {PARSE_GUARDRAILS}
 
+=== NATAL RASI CORE (mandatory when present) ===
+- Chart context includes a computed block "NATAL RASI CORE" with natal Lagna, Moon, graha signs/houses,
+  Lagna lord, and topic house-lord placements.
+- Copy those lines into the checklist. Do NOT mark Lagna / Moon / lagna-lord / topic-lord positions as
+  "insufficient data" when that block is present.
+- For transit topics, also copy "TRANSIT / GOCHARA CORE" planet signs and natal-house numbers.
+
 === HOW TO READ JH ASCII DIVISIONAL CHARTS ===
 - Each varga is a South-Indian style diamond with FIXED signs:
   top row = Pi | Ar | Ta | Ge
@@ -243,6 +250,9 @@ PREDICTION_SYSTEM_INSTRUCTION = SYSTEM_INSTRUCTION + f"""
 - When the subject's current age is provided, use it: frame timing, urgency, and life-stage guidance
   relative to that age (career phase, marriage/progeny windows, education stage, health/retirement themes).
   Do not give age-inappropriate advice (e.g. imminent childbearing or school exams) without acknowledging age.
+- A computed "NATAL RASI CORE" (and transit gochara core when present) is supplied with the prediction prompt.
+  Treat it as authoritative D-1 ground truth for Lagna, Moon, graha houses, and house-lord placements.
+  Never claim those natal positions were "not provided" when that block is present.
 
 {CLASSICAL_VEDIC_FRAMEWORK}
 """
@@ -261,10 +271,11 @@ TOPICS: list[TopicSpec] = [
         key="career",
         title="Career & Profession",
         parse_checklist=(
+            "- [ ] Natal Lagna sign + Lagna lord planet + lord's Rasi sign/house (from NATAL RASI CORE)\n"
+            "- [ ] Natal 10th sign + 10th lord + 10th lord's Rasi sign/house (from NATAL RASI CORE)\n"
             "- [ ] Quote D-10 / Dasamsa center label from the provided varga block\n"
             "- [ ] D-10 'As' sign = ____\n"
             "- [ ] Planets in D-10 1st/10th from that As (list abbreviations only from D-10 block)\n"
-            "- [ ] Natal Rasi 10th sign/lord (from Rasi block / longitude table)\n"
             "- [ ] AmK planet from Chara karaka table\n"
             "- [ ] Current natal Vimshottari MD + AD with start dates (quote lines)"
         ),
@@ -292,11 +303,12 @@ TOPICS: list[TopicSpec] = [
         key="wealth",
         title="Wealth, Income & Assets (D-2 & D-4)",
         parse_checklist=(
+            "- [ ] Natal Lagna + Lagna lord placement (from NATAL RASI CORE)\n"
+            "- [ ] Natal 2nd/4th/11th/12th signs + lords + each lord's Rasi house (from NATAL RASI CORE)\n"
             "- [ ] Quote D-2 center label (must look like 'D-2' / 'D-2 (US)'); NOT 'Hora Lord'\n"
             "- [ ] D-2 'As' sign = ____ ; planets in D-2 1st/2nd/11th from that As\n"
             "- [ ] Quote D-4 / Chaturthamsa center label\n"
             "- [ ] D-4 'As' sign = ____ ; planets in D-4 1st/4th from that As\n"
-            "- [ ] Natal Rasi 2nd/11th/4th factors (separate from D-2/D-4)\n"
             "- [ ] Current natal Vimshottari MD + AD with dates; Sudasa sign period if used"
         ),
         focus=(
@@ -326,9 +338,12 @@ TOPICS: list[TopicSpec] = [
         key="marriage",
         title="Marriage & Partnerships",
         parse_checklist=(
+            "- [ ] Natal Lagna + Lagna lord placement (from NATAL RASI CORE)\n"
+            "- [ ] Natal 7th sign + 7th lord + 7th lord's Rasi sign/house (from NATAL RASI CORE)\n"
+            "- [ ] Venus (kalatra) Rasi sign/house from NATAL RASI CORE\n"
             "- [ ] Quote D-9 / Navamsa center label from varga block\n"
             "- [ ] D-9 'As' sign = ____ ; 7th-from-D9-As sign/occupants\n"
-            "- [ ] Natal Rasi 7th sign/lord; DK from Chara karaka table\n"
+            "- [ ] DK from Chara karaka table\n"
             "- [ ] Optional: Gulika/Mandi signs if used (quote)\n"
             "- [ ] Current natal Vimshottari MD + AD with start dates"
         ),
@@ -358,9 +373,12 @@ TOPICS: list[TopicSpec] = [
         key="children",
         title="Children & Progeny",
         parse_checklist=(
+            "- [ ] Natal Lagna + Moon sign/house (from NATAL RASI CORE)\n"
+            "- [ ] Natal 5th/9th signs + lords + each lord's Rasi house (from NATAL RASI CORE)\n"
+            "- [ ] Jupiter Rasi sign/house from NATAL RASI CORE\n"
             "- [ ] Quote D-7 / Saptamsa center label\n"
             "- [ ] D-7 'As' sign = ____ ; 5th-from-D7-As occupants\n"
-            "- [ ] Natal Rasi 5th sign/lord; PK from Chara karaka table\n"
+            "- [ ] PK from Chara karaka table\n"
             "- [ ] Beeja/Kshetra sphuta if present (quote)\n"
             "- [ ] Current natal Vimshottari MD + AD with start dates"
         ),
@@ -387,10 +405,11 @@ TOPICS: list[TopicSpec] = [
         key="education",
         title="Education & Learning",
         parse_checklist=(
+            "- [ ] Natal Lagna + 2nd/4th/5th/9th signs + lords + lord houses (from NATAL RASI CORE)\n"
+            "- [ ] Mercury and Jupiter Rasi signs/houses (from NATAL RASI CORE)\n"
             "- [ ] Quote D-24 center label if present; else mark insufficient for D-24\n"
             "- [ ] D-24 'As' sign = ____ (if present)\n"
             "- [ ] Optional D-5 label/'As' if used\n"
-            "- [ ] Natal Rasi 4th/5th/9th + Mercury/Jupiter placements/strength\n"
             "- [ ] Current natal Vimshottari MD + AD with start dates"
         ),
         focus=(
@@ -415,10 +434,11 @@ TOPICS: list[TopicSpec] = [
         key="spiritual",
         title="Spiritual Progress",
         parse_checklist=(
+            "- [ ] Natal Lagna + 5th/9th/12th signs + lords + lord houses (from NATAL RASI CORE)\n"
+            "- [ ] Ketu and Jupiter Rasi signs/houses (from NATAL RASI CORE)\n"
             "- [ ] AK planet from Chara karaka table\n"
             "- [ ] Quote D-9 and any D-20 / D-60 center labels used\n"
             "- [ ] Each used varga's 'As' sign\n"
-            "- [ ] Ketu / 12th/9th/5th Rasi factors cited from natal data\n"
             "- [ ] Current natal Vimshottari MD + AD; Moola Dasa line if used"
         ),
         focus=(
@@ -444,9 +464,12 @@ TOPICS: list[TopicSpec] = [
         title="Transit Outlook (Next 1 Year)",
         parse_checklist=(
             "- [ ] Analysis/as-of date = ____\n"
+            "- [ ] Natal Lagna sign (from NATAL RASI CORE) = ____\n"
+            "- [ ] Natal Moon sign + house from Lagna (from NATAL RASI CORE) = ____\n"
+            "- [ ] Natal graha house placements for Su/Mo/Ma/Me/Ju/Ve/Sa/Ra/Ke (copy from NATAL RASI CORE)\n"
             "- [ ] Current natal Vimshottari MD + AD with start dates (quote natal table only)\n"
             "- [ ] Secondary snapshot date/place (if any) used ONLY for planet signs\n"
-            "- [ ] List Ju/Sa/Ra/Ke/(Ma) signs from snapshot or stated transit data\n"
+            "- [ ] Transit Ju/Sa/Ra/Ke/Ma signs + natal houses (from TRANSIT / GOCHARA CORE)\n"
             "- [ ] Explicitly affirm: no secondary-chart dasas used"
         ),
         focus=(
@@ -538,6 +561,9 @@ Topic-specific varga/dasa focus (for knowing what to extract):
 Complete this checklist with quoted evidence from the chart data (use 'insufficient data' if missing):
 {topic.parse_checklist}
 
+Priority: always fill natal Lagna / Moon / topic house-lord lines from "NATAL RASI CORE" when that
+block appears in the chart data — do not skip them.
+
 Output ONLY the completed checklist and any quoted raw lines you relied on.
 No predictions, remedies, or narrative interpretation.
 
@@ -555,6 +581,8 @@ def build_prediction_prompt(
     model_name: str | None = None,
     birth_date: str | None = None,
     subject_age: int | None = None,
+    natal_core_payload: str | None = None,
+    transit_core_payload: str | None = None,
 ) -> str:
     who = native_label or "the native"
     when = as_of or "today"
@@ -575,6 +603,12 @@ def build_prediction_prompt(
             f"Subject's current age as of {when}: unknown (birth date not detected). "
             "Do not invent an age; keep life-stage claims general."
         )
+    core_block = natal_core_payload.strip() if natal_core_payload else (
+        "(NATAL RASI CORE not supplied — use parse facts only for D-1.)"
+    )
+    transit_block = ""
+    if transit_core_payload and transit_core_payload.strip():
+        transit_block = f"\n\n{transit_core_payload.strip()}\n"
     return f"""Interpret the following Vedic chart reading for {who}.
 
 {model_line}
@@ -582,14 +616,18 @@ Topic: {topic.title}
 Analysis date / reference: {when}
 {age_line}
 
-=== VERIFIED PARSE FACTS (temperature 0 — do not contradict) ===
+=== AUTHORITATIVE CHART LOAD PAYLOAD (computed; do not claim missing) ===
+{core_block}
+{transit_block}
+=== VERIFIED PARSE FACTS (temperature 0 — do not contradict; prefer payload above for D-1 positions) ===
 {parse_summary}
 
 Topic-specific focus:
 {topic.focus}
 
 Tone for this prediction (mandatory):
-- Ground every claim in the verified parse facts / classical combinations above.
+- Ground every claim in the authoritative chart-load payload + verified parse facts / classical combinations.
+- Do not claim natal Lagna, Moon, graha houses, or house-lord positions are unavailable when the payload lists them.
 - Do not highlight positives more than the chart warrants; do not bury or soften negatives with diplomacy.
 - If the net indication is mixed or adverse, say so explicitly before offering guidance or remedies.
 - Prefer precise, sober wording over motivational or overly reassuring language.

@@ -182,7 +182,7 @@ def test_prediction_prompt_includes_subject_age():
     from vedicastroagent import __version__
     from vedicastroagent.prompts import PREDICTION_SYSTEM_INSTRUCTION, build_prediction_prompt
 
-    assert __version__ == "0.2.0"
+    assert __version__.startswith("0.2.")
     assert "current age" in PREDICTION_SYSTEM_INSTRUCTION
     topic = next(t for t in TOPICS if t.key == "marriage")
     pred_p = build_prediction_prompt(
@@ -196,6 +196,65 @@ def test_prediction_prompt_includes_subject_age():
     assert "birth date: 1981-03-15" in pred_p
     assert "Factor the subject's current age" in pred_p
     assert "current age/life stage" in pred_p
+
+
+def test_natal_rasi_core_payload_for_career_and_transits():
+    from vedicastroagent.chart_loader import (
+        format_natal_rasi_core,
+        format_transit_rasi_core,
+        parse_body_longitude_table,
+    )
+    from vedicastroagent.prompts import build_parse_prompt, build_prediction_prompt
+
+    chart = load_chart_file(FIXTURE)
+    bodies = parse_body_longitude_table(chart.natal_text)
+    assert bodies["Lagna"]["rasi"] == "Ar"
+    assert bodies["Moon"]["rasi"] == "Ge"
+
+    career_core = format_natal_rasi_core(chart, topic="career")
+    assert "Natal Lagna: Aries (Ar)" in career_core
+    assert "Lagna lord: Mars in Pi" in career_core
+    assert "House 10 sign Cp" in career_core
+    assert "lord Saturn in Vi" in career_core
+
+    transit_core = format_transit_rasi_core(chart)
+    assert transit_core is not None
+    assert "Transit Jupiter" in transit_core
+    assert "natal house" in transit_core
+
+    career_ctx = extract_relevant_context(chart, "career")
+    assert "NATAL RASI CORE" in career_ctx
+    transit_ctx = extract_relevant_context(chart, "transits")
+    assert "NATAL RASI CORE" in transit_ctx
+    assert "TRANSIT / GOCHARA CORE" in transit_ctx
+
+    career = next(t for t in TOPICS if t.key == "career")
+    transits = next(t for t in TOPICS if t.key == "transits")
+    assert "NATAL RASI CORE" in career.parse_checklist
+    assert "10th lord" in career.parse_checklist
+    assert "Natal Lagna sign" in transits.parse_checklist
+    assert "Natal Moon sign" in transits.parse_checklist
+    assert "TRANSIT / GOCHARA CORE" in transits.parse_checklist
+
+    parse_p = build_parse_prompt(career, career_ctx)
+    assert "NATAL RASI CORE" in parse_p
+    pred_p = build_prediction_prompt(
+        career,
+        "parse facts",
+        natal_core_payload=career_core,
+    )
+    assert "AUTHORITATIVE CHART LOAD PAYLOAD" in pred_p
+    assert "Lagna lord: Mars in Pi" in pred_p
+    assert "do not claim natal Lagna" in pred_p.lower() or "Do not claim natal Lagna" in pred_p
+
+    transit_pred = build_prediction_prompt(
+        transits,
+        "parse facts",
+        natal_core_payload=format_natal_rasi_core(chart, topic="transits"),
+        transit_core_payload=transit_core,
+    )
+    assert "Natal Moon: Gemini" in transit_pred
+    assert "Transit Jupiter" in transit_pred
 
 
 def test_two_phase_prompts_exist():

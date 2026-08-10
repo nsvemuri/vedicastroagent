@@ -91,6 +91,57 @@ _DASA_HEADERS = (
     "Chara Dasa",
 )
 
+SIGN_ORDER = ("Ar", "Ta", "Ge", "Cn", "Le", "Vi", "Li", "Sc", "Sg", "Cp", "Aq", "Pi")
+SIGN_LORDS = {
+    "Ar": "Mars",
+    "Ta": "Venus",
+    "Ge": "Mercury",
+    "Cn": "Moon",
+    "Le": "Sun",
+    "Vi": "Mercury",
+    "Li": "Venus",
+    "Sc": "Mars",
+    "Sg": "Jupiter",
+    "Cp": "Saturn",
+    "Aq": "Saturn",
+    "Pi": "Jupiter",
+}
+SIGN_FULL = {
+    "Ar": "Aries",
+    "Ta": "Taurus",
+    "Ge": "Gemini",
+    "Cn": "Cancer",
+    "Le": "Leo",
+    "Vi": "Virgo",
+    "Li": "Libra",
+    "Sc": "Scorpio",
+    "Sg": "Sagittarius",
+    "Cp": "Capricorn",
+    "Aq": "Aquarius",
+    "Pi": "Pisces",
+}
+_CLASSICAL_BODIES = (
+    "Lagna",
+    "Sun",
+    "Moon",
+    "Mars",
+    "Mercury",
+    "Jupiter",
+    "Venus",
+    "Saturn",
+    "Rahu",
+    "Ketu",
+)
+_TOPIC_CORE_HOUSES: dict[str, list[int]] = {
+    "career": [1, 6, 7, 10],
+    "wealth": [1, 2, 4, 11, 12],
+    "marriage": [1, 7],
+    "children": [1, 5, 9],
+    "education": [1, 2, 4, 5, 9],
+    "spiritual": [1, 5, 9, 12],
+    "transits": [1, 4, 7, 10],
+}
+
 
 @dataclass
 class ChartDocument:
@@ -268,13 +319,27 @@ def extract_relevant_context(
     max_chars: int = 32000,
 ) -> str:
     """Build a focused chart excerpt for a life-area query."""
+    natal_core = format_natal_rasi_core(chart, topic=topic)
     parts: list[str] = [
         "=== NATAL CHART METADATA ===",
         _format_metadata(chart.metadata),
         "",
+        natal_core,
+        "",
         "=== NATAL LONGITUDE / KARAKA TABLE (D-1 body list) ===",
         _header_table(chart.natal_text),
     ]
+    transit_core = format_transit_rasi_core(chart)
+    if transit_core and topic in {
+        "transits",
+        "career",
+        "wealth",
+        "marriage",
+        "children",
+        "education",
+        "spiritual",
+    }:
+        parts.extend(["", transit_core])
 
     vargas = TOPIC_VARGAS.get(topic, ["Rasi"])
     varga_parts: list[str] = []
@@ -425,6 +490,179 @@ def _excerpt_by_hints(
     if len(excerpt) > max_chars:
         return excerpt[:max_chars] + "\n[...truncated...]"
     return excerpt
+
+
+def _norm_sign(value: str) -> str:
+    return value[0].upper() + value[1:].lower()
+
+
+def parse_body_longitude_table(chart_text: str | None) -> dict[str, dict[str, str]]:
+    """Parse JH Body/Longitude rows into {body: {rasi, nakshatra, pada, navamsa, longitude}}."""
+    if not chart_text:
+        return {}
+    sign = r"(?:Ar|Ta|Ge|Cn|Le|Vi|Li|Sc|Sg|Cp|Aq|Pi)"
+    bodies = "|".join(_CLASSICAL_BODIES)
+    pattern = re.compile(
+        rf"^(?P<body>{bodies})"
+        r"(?:\s*\(R\))?"
+        r"(?:\s*-\s*[A-Za-z]+)?"
+        r"\s+"
+        rf"(?P<deg>\d{{1,2}})\s+(?P<lon_sign>{sign})\s+"
+        r"(?P<min>\d{1,2})'\s*(?P<sec>\d{1,2}(?:\.\d+)?)\""
+        rf"\s+(?P<nak>\S+)\s+(?P<pada>\d)\s+(?P<rasi>{sign})\s+(?P<nav>{sign})\s*$",
+        re.I,
+    )
+    canon = {b.lower(): b for b in _CLASSICAL_BODIES}
+    out: dict[str, dict[str, str]] = {}
+    for raw in chart_text.splitlines():
+        line = raw.strip()
+        m = pattern.match(line)
+        if not m:
+            continue
+        body = canon.get(m.group("body").lower())
+        if not body:
+            continue
+        rasi = _norm_sign(m.group("rasi"))
+        nav = _norm_sign(m.group("nav"))
+        lon_sign = _norm_sign(m.group("lon_sign"))
+        out[body] = {
+            "rasi": rasi,
+            "nakshatra": m.group("nak"),
+            "pada": m.group("pada"),
+            "navamsa": nav,
+            "longitude": f"{m.group('deg')} {lon_sign} {m.group('min')}' {m.group('sec')}\"",
+            "retrograde": " (R)" if re.search(r"\(R\)", line) else "",
+        }
+    return out
+
+
+def house_from_lagna(body_sign: str, lagna_sign: str) -> int | None:
+    if body_sign not in SIGN_ORDER or lagna_sign not in SIGN_ORDER:
+        return None
+    return (SIGN_ORDER.index(body_sign) - SIGN_ORDER.index(lagna_sign)) % 12 + 1
+
+
+def sign_for_house(lagna_sign: str, house: int) -> str | None:
+    if lagna_sign not in SIGN_ORDER or not 1 <= house <= 12:
+        return None
+    return SIGN_ORDER[(SIGN_ORDER.index(lagna_sign) + house - 1) % 12]
+
+
+def format_natal_rasi_core(chart: ChartDocument, *, topic: str | None = None) -> str:
+    """Computed D-1 core: Lagna/Moon/planets + topic house-lords (authoritative for prompts)."""
+    bodies = parse_body_longitude_table(chart.natal_text)
+    if "Lagna" not in bodies:
+        return (
+            "=== NATAL RASI CORE (computed from longitude table) ===\n"
+            "(insufficient data: Lagna row not parsed)"
+        )
+
+    lagna = bodies["Lagna"]
+    lagna_sign = lagna["rasi"]
+    lines = [
+        "=== NATAL RASI CORE (computed from longitude table; authoritative for D-1) ===",
+        (
+            f"Natal Lagna: {SIGN_FULL.get(lagna_sign, lagna_sign)} ({lagna_sign}); "
+            f"nakshatra {lagna['nakshatra']} pada {lagna['pada']}; "
+            f"longitude {lagna['longitude']}"
+        ),
+    ]
+    if "Moon" in bodies:
+        mo = bodies["Moon"]
+        h = house_from_lagna(mo["rasi"], lagna_sign)
+        lines.append(
+            f"Natal Moon: {SIGN_FULL.get(mo['rasi'], mo['rasi'])} ({mo['rasi']}) "
+            f"= house {h} from Lagna; nakshatra {mo['nakshatra']} pada {mo['pada']}"
+        )
+    if "Sun" in bodies:
+        su = bodies["Sun"]
+        h = house_from_lagna(su["rasi"], lagna_sign)
+        lines.append(
+            f"Natal Sun: {SIGN_FULL.get(su['rasi'], su['rasi'])} ({su['rasi']}) "
+            f"= house {h} from Lagna"
+        )
+
+    lines.append("Natal graha Rasi placements (sign → house from Lagna):")
+    for name in ("Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus", "Saturn", "Rahu", "Ketu"):
+        row = bodies.get(name)
+        if not row:
+            continue
+        h = house_from_lagna(row["rasi"], lagna_sign)
+        lines.append(
+            f"  - {name}{row['retrograde']}: {row['rasi']} "
+            f"({SIGN_FULL.get(row['rasi'], row['rasi'])}), house {h}; "
+            f"nak {row['nakshatra']} p{row['pada']}; Navamsa {row['navamsa']}"
+        )
+
+    # Lagna lord placement.
+    ll = SIGN_LORDS.get(lagna_sign)
+    if ll and ll in bodies:
+        ll_row = bodies[ll]
+        ll_h = house_from_lagna(ll_row["rasi"], lagna_sign)
+        lines.append(
+            f"Lagna lord: {ll} in {ll_row['rasi']} "
+            f"({SIGN_FULL.get(ll_row['rasi'], ll_row['rasi'])}), house {ll_h} from Lagna"
+        )
+    elif ll:
+        lines.append(f"Lagna lord: {ll} (placement not found in longitude table)")
+
+    houses = _TOPIC_CORE_HOUSES.get(topic or "", [1, 10])
+    lines.append(f"Topic house lords for '{topic or 'general'}' (from natal Lagna {lagna_sign}):")
+    for house in houses:
+        h_sign = sign_for_house(lagna_sign, house)
+        if not h_sign:
+            continue
+        lord = SIGN_LORDS[h_sign]
+        if lord in bodies:
+            lord_row = bodies[lord]
+            lord_h = house_from_lagna(lord_row["rasi"], lagna_sign)
+            lines.append(
+                f"  - House {house} sign {h_sign} ({SIGN_FULL.get(h_sign, h_sign)}), "
+                f"lord {lord} in {lord_row['rasi']} "
+                f"({SIGN_FULL.get(lord_row['rasi'], lord_row['rasi'])}), "
+                f"house {lord_h} from Lagna"
+            )
+        else:
+            lines.append(
+                f"  - House {house} sign {h_sign} ({SIGN_FULL.get(h_sign, h_sign)}), "
+                f"lord {lord} (placement not found)"
+            )
+
+    return "\n".join(lines)
+
+
+def format_transit_rasi_core(chart: ChartDocument) -> str | None:
+    """Gochara planet signs from secondary snapshot, if present."""
+    if not chart.secondary_text:
+        return None
+    bodies = parse_body_longitude_table(chart.secondary_text)
+    if not bodies:
+        return None
+    natal = parse_body_longitude_table(chart.natal_text)
+    lagna_sign = natal.get("Lagna", {}).get("rasi")
+    snap_date = chart.secondary_metadata.get("date", "unknown")
+    lines = [
+        "=== TRANSIT / GOCHARA CORE (from secondary snapshot; positions only) ===",
+        f"Snapshot date: {snap_date}",
+    ]
+    if lagna_sign:
+        lines.append(f"Houses counted from natal Lagna {lagna_sign}:")
+    for name in ("Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus", "Saturn", "Rahu", "Ketu"):
+        row = bodies.get(name)
+        if not row:
+            continue
+        if lagna_sign:
+            h = house_from_lagna(row["rasi"], lagna_sign)
+            lines.append(
+                f"  - Transit {name}{row['retrograde']}: {row['rasi']} "
+                f"({SIGN_FULL.get(row['rasi'], row['rasi'])}) = natal house {h}"
+            )
+        else:
+            lines.append(
+                f"  - Transit {name}{row['retrograde']}: {row['rasi']} "
+                f"({SIGN_FULL.get(row['rasi'], row['rasi'])})"
+            )
+    return "\n".join(lines)
 
 
 def parse_jh_date(value: str | None) -> date | None:
