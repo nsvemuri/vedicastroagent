@@ -91,7 +91,10 @@ class ClaudeClient:
         }
         if effort:
             create_kwargs["output_config"] = {"effort": effort}
-        response = self._client.messages.create(**create_kwargs)
+        # Anthropic SDK requires streaming when expected runtime > 10 minutes
+        # (triggered by high max_tokens, e.g. our 32k prediction budget).
+        with self._client.messages.stream(**create_kwargs) as stream:
+            response = stream.get_final_message()
         parts: list[str] = []
         block_types: list[str] = []
         for block in response.content:

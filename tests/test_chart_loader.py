@@ -76,6 +76,52 @@ def test_claude_token_budgets_leave_room_for_thinking():
     assert cfg.prediction_effort == "medium"
 
 
+def test_claude_client_uses_streaming_for_long_requests(monkeypatch):
+    """SDK raises if non-streaming max_tokens implies >10 minutes; we must stream."""
+    from types import SimpleNamespace
+
+    from vedicastroagent.claude_client import ClaudeClient, ClaudeConfig
+
+    class FakeStream:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+        def get_final_message(self):
+            return SimpleNamespace(
+                content=[SimpleNamespace(type="text", text="streamed ok")],
+                stop_reason="end_turn",
+                usage=SimpleNamespace(output_tokens=3),
+            )
+
+    class FakeMessages:
+        def __init__(self):
+            self.stream_calls = 0
+            self.create_calls = 0
+
+        def stream(self, **kwargs):
+            self.stream_calls += 1
+            assert kwargs["max_tokens"] >= 16384
+            assert "temperature" not in kwargs
+            return FakeStream()
+
+        def create(self, **kwargs):
+            self.create_calls += 1
+            raise AssertionError("non-streaming create must not be used")
+
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
+    client = ClaudeClient(ClaudeConfig(model="sonnet", api_key="test-key"))
+    fake = FakeMessages()
+    client._client = SimpleNamespace(messages=fake)
+
+    out = client.generate_parse(system="sys", user="user")
+    assert out == "streamed ok"
+    assert fake.stream_calls == 1
+    assert fake.create_calls == 0
+
+
 def test_resolve_provider_aliases():
     assert resolve_provider("gemini") == "gemini"
     assert resolve_provider("google") == "gemini"
