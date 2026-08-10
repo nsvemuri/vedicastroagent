@@ -46,10 +46,22 @@ Rules:
 - When Pushkara Navamsha is not explicitly labeled, deduce it from the Navamsa column
   using classical Pushkara navamsha rules and state your deduction clearly.
 - Distinguish natal promise vs timing (dasas / transits).
-- Be practical and nuanced; avoid fatalism. Mention both supports and challenges.
 - If data for a sub-topic is missing, say so instead of inventing placements.
 - Write in clear English with short section headings and bullet points.
 - Accuracy of varga/dasa reading beats eloquence. If unsure, quote the raw cell/line.
+
+=== FACTUALITY & TONE (anti-sugarcoating) ===
+- Lead with what the chart actually shows, not with reassurance.
+- Do NOT overweight positives, soft-pedal afflictions, or stay politely vague about negatives.
+- When dusthana links, debilitation, papakartari, gandanta, weak shadbala, difficult dasas, or broken yogas
+  are present, state them plainly in section 5 (and in the core pattern if they dominate the topic).
+- Balance means proportional to evidence: if challenges outweigh supports, say so; if supports dominate, say so.
+- Avoid hype ("excellent", "blessed", "wonderful") unless multiple strong factors concur; prefer precise classical language.
+- Avoid evasive diplomacy ("some challenges may arise", "needs care") — name the factor and the likely life effect.
+- Avoid fatalism and cruelty: be direct, specific, and constructive (timing + practical steps + remedies if warranted).
+- Do not invent consoling yogas or "it will all work out" endings unsupported by the data.
+- For sensitive topics (children, marriage health), remain respectful but still explicit about delay, friction, or risk
+  when the chart indicates it — clarity over comfort.
 
 === SIMPLE REMEDIES (when applicable) ===
 - Suggest remedies ONLY when the chart shows clear affliction, delay, or repeated challenge
@@ -226,6 +238,11 @@ PREDICTION_SYSTEM_INSTRUCTION = SYSTEM_INSTRUCTION + f"""
 - Actively apply classical house categories, Yogakaraka, yogas, dignities, aspects, functional nature,
   **nakshatra/pada/nakshatra-lord/deity**, gandanta when indicated, and varga deities only when highly relevant
   (see framework below). Prefer a few well-supported vitals over a long checklist of guesses.
+- Factual priority: section 3 must reflect the true net pattern (including hard patterns when dominant);
+  section 5 must be concrete, not a soft afterthought; do not end every reading with forced optimism.
+- When the subject's current age is provided, use it: frame timing, urgency, and life-stage guidance
+  relative to that age (career phase, marriage/progeny windows, education stage, health/retirement themes).
+  Do not give age-inappropriate advice (e.g. imminent childbearing or school exams) without acknowledging age.
 
 {CLASSICAL_VEDIC_FRAMEWORK}
 """
@@ -348,17 +365,18 @@ TOPICS: list[TopicSpec] = [
             "- [ ] Current natal Vimshottari MD + AD with start dates"
         ),
         focus=(
-            "Analyze progeny happiness, timing, and possible challenges (sensitive, non-alarmist).\n"
+            "Analyze progeny happiness, timing, and possible challenges (respectful but factually direct).\n"
             "Domain Depth: Evaluate 5th house/lord (Trikona) from Lagna and Moon. Use Jupiter (Putrakaraka) and Jaimini PK. "
             "Examine Saptamsa (D-7) lagna, 5th lord (1st child), 7th lord (2nd child). Check 9th (Trikona; 5th from 5th) "
             "for progeny luck. Weigh dignities of Jupiter/5th lord; dusthana afflictions (6/8/12) or Badhaka on the 5th axis; "
             "Rahu/Ketu/Saturn pressure. Note Jupiter/PK/5th-lord nakshatra+pada and nakshatra-lord/deity for progeny timing "
             "tone; gandanta caution without alarmism. D-7 deity/creative overlay when Saptamsa is used. "
-            "Santana/putra yogas only when clearly formed. State if Beeja/Kshetra sphuta indicates delay — stay gentle.\n"
+            "Santana/putra yogas only when clearly formed. State clearly if Beeja/Kshetra sphuta or afflicted 5th/D-7 "
+            "indicate delay, difficulty, or limited progeny promise — no sugarcoating, no alarmism.\n"
             "Primary Vargas: natal Rasi 5th + ASCII D-7 / Saptamsa ONLY for saptamsa claims.\n"
             "Do not use D-5/D-9 as a substitute for D-7.\n"
             "Also PK, Jupiter, Beeja/Kshetra sphuta if present; NATAL Vimshottari for timing.\n"
-            "Simple Remedies (only if 5th/7th-from-D-7, Jupiter, or PK show delay/affliction — be gentle): "
+            "Simple Remedies (only if 5th/7th-from-D-7, Jupiter, or PK show delay/affliction): "
             "Thursday Jupiter — Santana Gopal mantra or Vishnu/Jupiter stuti, charity for children's welfare; "
             "respect Putrakaraka significations (guidance, protection of children); Beeja/Kshetra imbalance — "
             "simple vrata or charity on the day of the afflicted sphuta lord if cited; avoid alarmist or "
@@ -535,21 +553,47 @@ def build_prediction_prompt(
     native_label: str | None = None,
     as_of: str | None = None,
     model_name: str | None = None,
+    birth_date: str | None = None,
+    subject_age: int | None = None,
 ) -> str:
     who = native_label or "the native"
     when = as_of or "today"
     model_line = f"Model: {model_name or DEFAULT_MODEL} (prediction step, temperature {PREDICTION_TEMPERATURE})"
+    if subject_age is not None:
+        birth_bit = f" (birth date: {birth_date})" if birth_date else ""
+        age_line = (
+            f"Subject's current age as of {when}: {subject_age} completed years{birth_bit}. "
+            "Anchor life-stage timing and guidance to this age."
+        )
+    elif birth_date:
+        age_line = (
+            f"Birth date: {birth_date}. Age as of {when}: unknown/unparsed — "
+            "infer life stage cautiously from birth year if needed."
+        )
+    else:
+        age_line = (
+            f"Subject's current age as of {when}: unknown (birth date not detected). "
+            "Do not invent an age; keep life-stage claims general."
+        )
     return f"""Interpret the following Vedic chart reading for {who}.
 
 {model_line}
 Topic: {topic.title}
 Analysis date / reference: {when}
+{age_line}
 
 === VERIFIED PARSE FACTS (temperature 0 — do not contradict) ===
 {parse_summary}
 
 Topic-specific focus:
 {topic.focus}
+
+Tone for this prediction (mandatory):
+- Ground every claim in the verified parse facts / classical combinations above.
+- Do not highlight positives more than the chart warrants; do not bury or soften negatives with diplomacy.
+- If the net indication is mixed or adverse, say so explicitly before offering guidance or remedies.
+- Prefer precise, sober wording over motivational or overly reassuring language.
+- Factor the subject's current age into timing windows and practical guidance for this topic.
 
 Classical vitals to weigh when supported by the parse/chart facts:
 - House classes for topic lords: Kendra / Trikona / Dusthana / Upachaya / Maraka / Badhaka
@@ -565,10 +609,10 @@ Classical vitals to weigh when supported by the parse/chart facts:
 
 Required response structure (sections 2–8 only; parse facts are already verified above):
 2. Key chart factors used (Yogakaraka / house-class / dignity / nakshatra-pada notes when relevant)
-3. Core promise / pattern (yogas, nakshatra-lord links, and functional combinations that define the topic)
-4. Strengths and supports
-5. Challenges / cautions (dusthana/badhaka/maraka/gandanta/affliction themes if indicated)
-6. Timing notes (natal dasas / transits) — dates mandatory when timing is claimed
-7. Practical guidance
+3. Core promise / pattern — net assessment first (strong / mixed / challenged), then the yogas and combinations
+4. Strengths and supports — only factors actually present; no padding
+5. Challenges / cautions — explicit and specific when indicated (do not minimize); say "none material" only if truly so
+6. Timing notes (natal dasas / transits) — dates mandatory when timing is claimed; include difficult windows plainly; relate windows to current age/life stage
+7. Practical guidance — realistic actions given the net pattern and current age (not pep talk)
 8. Simple remedies (where applicable — tied to cited afflictions; skip or say none if chart is strong)
 """

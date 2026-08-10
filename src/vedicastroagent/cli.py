@@ -170,6 +170,7 @@ def _dry_run(
         extract_dasa_section,
         extract_relevant_context,
         extract_varga_block,
+        subject_age_as_of,
     )
     from .llm import create_llm_client
 
@@ -193,11 +194,19 @@ def _dry_run(
 
             model_label = model or os.getenv("GEMINI_MODEL", DEFAULT_GEMINI_MODEL)
 
+    birth_date, subject_age = subject_age_as_of(chart, as_of)
     console.print(Panel.fit("[bold]Dry run — chart parsed successfully[/bold]"))
     console.print(f"Provider: {provider_label}")
     console.print(f"Model: {model_label}")
     console.print(f"Source: {chart.source_path}")
     console.print(f"Natal metadata: {chart.metadata}")
+    if subject_age is not None:
+        console.print(
+            f"Subject age as of {as_of.isoformat()}: {subject_age} "
+            f"(birth {birth_date.isoformat() if birth_date else 'unknown'})"
+        )
+    else:
+        console.print(f"Subject age as of {as_of.isoformat()}: unknown")
     if chart.secondary_text:
         console.print(f"Secondary metadata: {chart.secondary_metadata}")
     else:

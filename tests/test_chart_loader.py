@@ -151,6 +151,53 @@ def test_topics_include_remedy_guidance():
         assert "Simple remedies" in prompt
 
 
+def test_prediction_tone_is_fact_first():
+    from vedicastroagent.prompts import PREDICTION_SYSTEM_INSTRUCTION, build_prediction_prompt
+
+    assert "FACTUALITY & TONE" in SYSTEM_INSTRUCTION
+    assert "anti-sugarcoating" in SYSTEM_INSTRUCTION
+    assert "Do NOT overweight positives" in SYSTEM_INSTRUCTION
+    assert "forced optimism" in PREDICTION_SYSTEM_INSTRUCTION
+    topic = next(t for t in TOPICS if t.key == "wealth")
+    pred_p = build_prediction_prompt(topic, "parse facts")
+    assert "Do not highlight positives more than the chart warrants" in pred_p
+    assert "net assessment first" in pred_p
+
+
+def test_subject_age_from_natal_date():
+    from datetime import date
+
+    from vedicastroagent.chart_loader import age_years, parse_jh_date, subject_age_as_of
+
+    assert parse_jh_date("March 15, 1981") == date(1981, 3, 15)
+    assert age_years(date(1981, 3, 15), date(2026, 8, 10)) == 45
+    assert age_years(date(1981, 3, 15), date(2026, 3, 14)) == 44
+    chart = load_chart_file(FIXTURE)
+    birth, age = subject_age_as_of(chart, date(2026, 8, 10))
+    assert birth == date(1981, 3, 15)
+    assert age == 45
+
+
+def test_prediction_prompt_includes_subject_age():
+    from vedicastroagent import __version__
+    from vedicastroagent.prompts import PREDICTION_SYSTEM_INSTRUCTION, build_prediction_prompt
+
+    assert __version__ == "0.2.0"
+    assert "current age" in PREDICTION_SYSTEM_INSTRUCTION
+    topic = next(t for t in TOPICS if t.key == "marriage")
+    pred_p = build_prediction_prompt(
+        topic,
+        "parse facts",
+        as_of="2026-08-10",
+        birth_date="1981-03-15",
+        subject_age=45,
+    )
+    assert "Subject's current age as of 2026-08-10: 45 completed years" in pred_p
+    assert "birth date: 1981-03-15" in pred_p
+    assert "Factor the subject's current age" in pred_p
+    assert "current age/life stage" in pred_p
+
+
 def test_two_phase_prompts_exist():
     from vedicastroagent.prompts import (
         CLASSICAL_VEDIC_FRAMEWORK,

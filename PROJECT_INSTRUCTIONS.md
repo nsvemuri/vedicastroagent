@@ -49,6 +49,8 @@ Incorrect D-2/D-4/dasa readings can come from **context extraction bugs** or fro
 - Never attach secondary-chart dasas to native timing.
 - Each topic prompt must include a **literal parse checklist** and quote-before-interpret rules (`prompts.py`).
 - Prediction prompts must apply classical vitals when supported: Kendra/Trikona/Dusthana/Upachaya, Yogakaraka, yogas, dignities, aspects, functional benefic/malefic, **nakshatra/pada/nakshatra-lord/deity**, gandanta, and selective varga deities (`CLASSICAL_VEDIC_FRAMEWORK` in `prompts.py`).
+- Prediction tone must be **fact-first**: no sugarcoating, no overweighting positives, no diplomatic vagueness on negatives (`FACTUALITY & TONE` in `prompts.py`).
+- Prediction prompts must include the subject's **current age** (from natal `Date:` vs `--as-of` / today) and age-aware timing/guidance.
 
 ## Code map
 

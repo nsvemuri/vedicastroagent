@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
+from datetime import date, datetime
 from pathlib import Path
 from typing import Iterable
 
@@ -424,6 +425,60 @@ def _excerpt_by_hints(
     if len(excerpt) > max_chars:
         return excerpt[:max_chars] + "\n[...truncated...]"
     return excerpt
+
+
+def parse_jh_date(value: str | None) -> date | None:
+    """Parse common Jagannatha Hora date strings (e.g. 'March 15, 1981')."""
+    if not value:
+        return None
+    text = value.strip()
+    for fmt in (
+        "%B %d, %Y",
+        "%b %d, %Y",
+        "%B %d %Y",
+        "%b %d %Y",
+        "%Y-%m-%d",
+        "%d-%m-%Y",
+        "%m/%d/%Y",
+        "%d/%m/%Y",
+    ):
+        try:
+            return datetime.strptime(text, fmt).date()
+        except ValueError:
+            continue
+    m = re.search(
+        r"\b(January|February|March|April|May|June|July|August|September|October|November|December|"
+        r"Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec)\s+(\d{1,2}),?\s+(\d{4})\b",
+        text,
+        flags=re.IGNORECASE,
+    )
+    if m:
+        month, day, year = m.group(1), m.group(2), m.group(3)
+        for fmt in ("%B %d %Y", "%b %d %Y"):
+            try:
+                return datetime.strptime(f"{month} {day} {year}", fmt).date()
+            except ValueError:
+                continue
+    return None
+
+
+def age_years(birth: date, as_of: date) -> int:
+    """Completed years of age on as_of (negative if as_of precedes birth)."""
+    years = as_of.year - birth.year
+    if (as_of.month, as_of.day) < (birth.month, birth.day):
+        years -= 1
+    return years
+
+
+def subject_age_as_of(chart: ChartDocument, as_of: date) -> tuple[date | None, int | None]:
+    """Return (birth_date, age_years) from natal metadata relative to as_of."""
+    birth = parse_jh_date(chart.metadata.get("date"))
+    if birth is None:
+        return None, None
+    age = age_years(birth, as_of)
+    if age < 0:
+        return birth, None
+    return birth, age
 
 
 def _format_metadata(meta: dict[str, str]) -> str:

@@ -8,7 +8,13 @@ from dataclasses import dataclass, field
 from datetime import date
 from pathlib import Path
 
-from .chart_loader import ChartDocument, current_vimsottari_summary, extract_relevant_context, load_chart_file
+from .chart_loader import (
+    ChartDocument,
+    current_vimsottari_summary,
+    extract_relevant_context,
+    load_chart_file,
+    subject_age_as_of,
+)
 from .llm import LLMClient, create_llm_client
 from .prompts import (
     PARSE_SYSTEM_INSTRUCTION,
@@ -36,9 +42,16 @@ class AnalysisReport:
     results: list[TopicResult] = field(default_factory=list)
     model: str = ""
     provider: str = ""
+    as_of: str = ""
+    subject_age: int | None = None
 
     def to_markdown(self) -> str:
         meta = self.chart.metadata
+        age_label = (
+            f"{self.subject_age} (as of {self.as_of})"
+            if self.subject_age is not None and self.as_of
+            else (str(self.subject_age) if self.subject_age is not None else "unknown")
+        )
         header = [
             f"# Vedic Astrology Report",
             "",
@@ -46,6 +59,7 @@ class AnalysisReport:
             f"- Provider: `{self.provider}`",
             f"- Model: `{self.model}`",
             f"- Birth date: {meta.get('date', 'unknown')}",
+            f"- Age at analysis: {age_label}",
             f"- Birth time: {meta.get('time', 'unknown')}",
             f"- Place: {meta.get('location_name') or meta.get('place', 'unknown')}",
         ]
@@ -96,10 +110,14 @@ class VedicAstroAgent:
         selected = _select_topics(topics)
         as_of = as_of or date.today()
         as_of_label = as_of.isoformat()
+        birth_date, subject_age = subject_age_as_of(chart, as_of)
+        birth_date_label = birth_date.isoformat() if birth_date else chart.metadata.get("date")
         report = AnalysisReport(
             chart=chart,
             model=self.client.config.model,
             provider=self.client.config.provider,
+            as_of=as_of_label,
+            subject_age=subject_age,
         )
         workers = _resolve_workers(max_workers, topic_count=len(selected))
 
@@ -112,6 +130,8 @@ class VedicAstroAgent:
                         native_label=native_label,
                         as_of_label=as_of_label,
                         as_of_year=as_of.year,
+                        birth_date=birth_date_label,
+                        subject_age=subject_age,
                     )
                 )
             return report
@@ -127,6 +147,8 @@ class VedicAstroAgent:
                     native_label=native_label,
                     as_of_label=as_of_label,
                     as_of_year=as_of.year,
+                    birth_date=birth_date_label,
+                    subject_age=subject_age,
                 ): idx
                 for idx, topic in enumerate(selected)
             }
@@ -145,6 +167,8 @@ class VedicAstroAgent:
         native_label: str | None,
         as_of_label: str,
         as_of_year: int,
+        birth_date: str | None,
+        subject_age: int | None,
     ) -> TopicResult:
         context = extract_relevant_context(chart, topic.key)
         if topic.key == "transits":
@@ -174,6 +198,8 @@ class VedicAstroAgent:
             native_label=native_label,
             as_of=as_of_label,
             model_name=self.client.config.model,
+            birth_date=birth_date,
+            subject_age=subject_age,
         )
         prediction = self.client.generate_prediction(
             system=PREDICTION_SYSTEM_INSTRUCTION,
