@@ -152,16 +152,30 @@ def test_topics_include_remedy_guidance():
 
 
 def test_two_phase_prompts_exist():
-    from vedicastroagent.prompts import build_parse_prompt, build_prediction_prompt
+    from vedicastroagent.prompts import (
+        CLASSICAL_VEDIC_FRAMEWORK,
+        PREDICTION_SYSTEM_INSTRUCTION,
+        build_parse_prompt,
+        build_prediction_prompt,
+    )
 
     topic = next(t for t in TOPICS if t.key == "wealth")
     parse_p = build_parse_prompt(topic, "chart...")
     assert "Do NOT interpret" in parse_p
     assert "temperature 0" in parse_p
+    assert "CLASSICAL VEDIC VITALS" not in parse_p  # full framework is prediction-only
     pred_p = build_prediction_prompt(topic, "parse facts here")
     assert "VERIFIED PARSE FACTS" in pred_p
     assert "sections 2–8" in pred_p
     assert "0.05" in pred_p
+    assert "Yogakaraka" in pred_p
+    assert "Kendra" in pred_p and "Trikona" in pred_p and "Dusthana" in pred_p
+    assert "Yogakaraka" in CLASSICAL_VEDIC_FRAMEWORK
+    assert "Upachaya" in CLASSICAL_VEDIC_FRAMEWORK
+    assert "Maraka" in CLASSICAL_VEDIC_FRAMEWORK
+    assert "Badhaka" in CLASSICAL_VEDIC_FRAMEWORK
+    assert "CLASSICAL VEDIC VITALS" in PREDICTION_SYSTEM_INSTRUCTION
+    assert "Yogakaraka" in PREDICTION_SYSTEM_INSTRUCTION
 
 
 def test_resolve_workers_caps_to_topic_count():
