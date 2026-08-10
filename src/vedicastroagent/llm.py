@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import os
-import re
 from dataclasses import dataclass
 from typing import Protocol, runtime_checkable
 
@@ -81,26 +80,19 @@ def resolve_claude_model(model: str | None = None) -> str:
     )
 
 
-# Opus 4.7+ / Opus 5+ / Mythos reject temperature/top_p/top_k (HTTP 400 if sent).
-# Older Opus 4.0–4.6 ids still accept temperature.
-_CLAUDE_OPUS_TEMPERATURE_OK = re.compile(
-    r"opus-4-(?:0|1|5|6)(?:$|[^0-9])|opus-4-20250514|opus-4-1-202",
-    re.IGNORECASE,
-)
-
-
 def claude_supports_temperature(model: str) -> bool:
-    """Return False when the Messages API rejects the temperature parameter."""
-    m = (model or "").lower()
-    if "mythos" in m:
-        return False
-    if "opus" in m:
-        return bool(_CLAUDE_OPUS_TEMPERATURE_OK.search(m))
-    return True
+    """Return False when the Messages API rejects the temperature parameter.
+
+    Claude Sonnet 5, Opus 4.7+, and Mythos return HTTP 400 if temperature is sent.
+    We omit it for all Claude model ids — safe for older Sonnet/Opus too (API default).
+    """
+    _ = model
+    return False
 
 
 def claude_sampling_kwargs(model: str, temperature: float) -> dict[str, float]:
     """Sampling kwargs safe for the given Claude model (may be empty)."""
+    _ = temperature
     if claude_supports_temperature(model):
         return {"temperature": temperature}
     return {}

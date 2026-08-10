@@ -70,7 +70,7 @@ class ClaudeClient:
         max_output_tokens: int | None = None,
     ) -> str:
         temp = self.config.prediction_temperature if temperature is None else temperature
-        # Opus 4.7+ / Mythos: omit temperature entirely (API returns 400 if sent).
+        # Sonnet 5 / Opus 4.7+ / Mythos: omit temperature (API returns 400 if sent).
         sampling = claude_sampling_kwargs(self.config.model, temp)
         response = self._client.messages.create(
             model=self.config.model,
