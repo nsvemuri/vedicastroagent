@@ -245,6 +245,9 @@ PREDICTION_SYSTEM_INSTRUCTION = SYSTEM_INSTRUCTION + f"""
 - Actively apply classical house categories, Yogakaraka, yogas, dignities, aspects, functional nature,
   **nakshatra/pada/nakshatra-lord/deity**, gandanta when indicated, and varga deities only when highly relevant
   (see framework below). Prefer a few well-supported vitals over a long checklist of guesses.
+- **Topic-specific yogas are mandatory:** each topic focus lists yogas/doshas to scan for that life area.
+  In section 3, name which of those are present, partial/broken, or absent (with brief placement evidence).
+  Do not skip the topic yoga scan; do not dump unrelated yogas from other life areas.
 - Factual priority: section 3 must reflect the true net pattern (including hard patterns when dominant);
   section 5 must be concrete, not a soft afterthought; do not end every reading with forced optimism.
 - When the subject's current age is provided, use it: frame timing, urgency, and life-stage guidance
@@ -277,6 +280,7 @@ TOPICS: list[TopicSpec] = [
             "- [ ] D-10 'As' sign = ____\n"
             "- [ ] Planets in D-10 1st/10th from that As (list abbreviations only from D-10 block)\n"
             "- [ ] AmK planet from Chara karaka table\n"
+            "- [ ] Associations of 9th/10th/(4th/5th) lords: conjunction, mutual aspect, or exchange (quote signs/houses)\n"
             "- [ ] Current natal Vimshottari MD + AD with start dates (quote lines)"
         ),
         focus=(
@@ -289,6 +293,14 @@ TOPICS: list[TopicSpec] = [
             "image and A10 (Rajya Pada). Evaluate Sun/Mars for leadership, Mercury/Jupiter for advising/consulting; "
             "note dignity (uccha/neecha/own) of AmK/10th lord; their nakshatra/pada and nakshatra-lord (career flavor via deity/"
             "dispositor). Flag gandanta on 10th lord/AmK if indicated. In D-10, 1st/6th/10th axes + D-10 deity/duty flavor.\n"
+            "Topic-specific yogas (mandatory scan — state present / partial-broken / absent with evidence):\n"
+            "1) Raja yogas of 9–10, 4–5, 5–10, or other Kendra+Trikona lord links affecting profession;\n"
+            "2) Yogakaraka for Lagna and its link to 10th/AmK/D-10;\n"
+            "3) Jaimini AK–AmK (and related karaka) rajayoga;\n"
+            "4) Amala yoga (benefic in 10th from Lagna or Moon) if data supports;\n"
+            "5) Vipareeta Raja involving 6/8/12 lords that elevate career after struggle;\n"
+            "6) Parivartana / Cartari on the 10th or career lords; Neecha Bhanga of 10th lord/AmK/Yogakaraka;\n"
+            "7) Pancha Mahapurusha (Ruchaka/Bhadra/Hamsa/Malavya/Sasa) only if clearly formed and career-relevant.\n"
             "Primary Vargas: natal Rasi + ASCII block labeled D-10 / Dasamsa ONLY for dasamsa claims.\n"
             "Also use Hora/Ghati Lagna cues, shadbala, 10th ashtakavarga, NATAL Vimshottari (Narayana optional).\n"
             "Do not cite D-9/D-2/D-4 placements as career proof unless clearly secondary support.\n"
@@ -309,6 +321,7 @@ TOPICS: list[TopicSpec] = [
             "- [ ] D-2 'As' sign = ____ ; planets in D-2 1st/2nd/11th from that As\n"
             "- [ ] Quote D-4 / Chaturthamsa center label\n"
             "- [ ] D-4 'As' sign = ____ ; planets in D-4 1st/4th from that As\n"
+            "- [ ] Associations of 1st/2nd/5th/9th/11th lords (conj/aspect/exchange) for Dhana yoga evidence\n"
             "- [ ] Current natal Vimshottari MD + AD with dates; Sudasa sign period if used"
         ),
         focus=(
@@ -320,6 +333,14 @@ TOPICS: list[TopicSpec] = [
             "for prosperity magnitude; Chandra-Mangala when Moon-Mars link cash flow. Read 2nd/11th lords' nakshatra/pada "
             "and nakshatra-lords (resource style); gandanta on wealth lords = abrupt gains/drains. In D-2 note 2nd house + "
             "Sun/Moon hora polarity; in D-4 evaluate 4th lord, Mars, Venus dignity and D-4 fortune/property deity flavor.\n"
+            "Topic-specific yogas (mandatory scan — state present / partial-broken / absent with evidence):\n"
+            "1) Dhana yogas (lords of 1/2/5/9/11 linking by conj/aspect/exchange);\n"
+            "2) Daridra / poverty yogas (6/8/12 links draining 2nd/11th) — name if present, do not soft-pedal;\n"
+            "3) Chandra-Mangala (Moon–Mars) for cash flow; Guru-related dhana links (Jupiter with 2nd/5th/9th/11th);\n"
+            "4) Lakshmi / Vasumati-type prosperity yogas only when clearly supported;\n"
+            "5) Vipareeta Raja elevating wealth after struggle; Kahala/Parivartana involving wealth houses;\n"
+            "6) Neecha Bhanga of 2nd/11th/Jupiter/Venus; Cartari on 2nd/11th/4th;\n"
+            "7) Yogakaraka support (or affliction) to dhana houses; D-2/D-4 confirmation or denial of Rasi dhana promise.\n"
             "HARD RULES:\n"
             "1) Liquid wealth: ONLY ASCII 'Varga block: D-2'. Ignore Hora Lord / Hora Lagna / Mahakala Hora.\n"
             "2) Property/fixed assets: ONLY ASCII 'Varga block: D-4' / Chaturthamsa.\n"
@@ -344,6 +365,7 @@ TOPICS: list[TopicSpec] = [
             "- [ ] Quote D-9 / Navamsa center label from varga block\n"
             "- [ ] D-9 'As' sign = ____ ; 7th-from-D9-As sign/occupants\n"
             "- [ ] DK from Chara karaka table\n"
+            "- [ ] Associations of 7th lord / Venus / DK (conj/aspect/exchange); Mars house for Kuja Dosha check\n"
             "- [ ] Optional: Gulika/Mandi signs if used (quote)\n"
             "- [ ] Current natal Vimshottari MD + AD with start dates"
         ),
@@ -356,7 +378,14 @@ TOPICS: list[TopicSpec] = [
             "Check Kuja Dosha, Papakartari on 7th, dusthana afflictions to 7th/UL, Badhaka activation, and dignity "
             "(uccha/neecha/own) of Venus and 7th lord. Use Venus/DK/7th-lord nakshatra+pada, nakshatra-lord, and deity "
             "for spouse/relationship tone; gandanta there = volatile or fated partnership turns. D-9 deity/dharma overlay "
-            "when Navamsa drives the reading. Raja/Kalatra yogas only if clearly supported.\n"
+            "when Navamsa drives the reading.\n"
+            "Topic-specific yogas (mandatory scan — state present / partial-broken / absent with evidence):\n"
+            "1) Kalatra / marriage-supporting yogas (strong Venus–7th lord / DK links; Shubhakartari on 7th);\n"
+            "2) Raja yogas touching 7th/UL/DK that elevate partnership status;\n"
+            "3) Kuja Dosha (and classical cancellation if any); Papakartari or dusthana affliction to 7th/UL;\n"
+            "4) Parivartana involving 1–7, 2–7, 7–UL, or Venus with 7th lord;\n"
+            "5) Neecha Bhanga of Venus/7th lord/DK; Malavya (Venus) or Hamsa (Jupiter) if clearly formed;\n"
+            "6) D-9 confirmation/denial of Rasi marriage yogas; remarriage / multiple-bond patterns only if supported.\n"
             "Primary Vargas: natal Rasi 7th + ASCII D-9 / Navamsa block only for navamsa claims.\n"
             "Longitude-table Navamsa column may support dignity notes but does not replace the D-9 diamond.\n"
             "Use DK, Gulika/Mandi if relevant; NATAL Vimshottari only for timing.\n"
@@ -379,6 +408,7 @@ TOPICS: list[TopicSpec] = [
             "- [ ] Quote D-7 / Saptamsa center label\n"
             "- [ ] D-7 'As' sign = ____ ; 5th-from-D7-As occupants\n"
             "- [ ] PK from Chara karaka table\n"
+            "- [ ] Associations of 5th/9th lords with Jupiter/PK (conj/aspect/exchange)\n"
             "- [ ] Beeja/Kshetra sphuta if present (quote)\n"
             "- [ ] Current natal Vimshottari MD + AD with start dates"
         ),
@@ -389,8 +419,14 @@ TOPICS: list[TopicSpec] = [
             "for progeny luck. Weigh dignities of Jupiter/5th lord; dusthana afflictions (6/8/12) or Badhaka on the 5th axis; "
             "Rahu/Ketu/Saturn pressure. Note Jupiter/PK/5th-lord nakshatra+pada and nakshatra-lord/deity for progeny timing "
             "tone; gandanta caution without alarmism. D-7 deity/creative overlay when Saptamsa is used. "
-            "Santana/putra yogas only when clearly formed. State clearly if Beeja/Kshetra sphuta or afflicted 5th/D-7 "
+            "State clearly if Beeja/Kshetra sphuta or afflicted 5th/D-7 "
             "indicate delay, difficulty, or limited progeny promise — no sugarcoating, no alarmism.\n"
+            "Topic-specific yogas (mandatory scan — state present / partial-broken / absent with evidence):\n"
+            "1) Putra / Santana yogas (strong Jupiter–5th / 5th–9th / PK links by conj/aspect/exchange);\n"
+            "2) Gaja Kesari or other Jupiter-strength yogas that support progeny happiness when clearly formed;\n"
+            "3) Raja/Trikona yogas involving 5th/9th that favor children vs dusthana/Badhaka afflictions that delay/deny;\n"
+            "4) Neecha Bhanga of Jupiter/5th lord/PK; Cartari or papagraha pressure on 5th;\n"
+            "5) D-7 confirmation/denial of Rasi putra promise; Beeja/Kshetra imbalance as a counter-yoga factor.\n"
             "Primary Vargas: natal Rasi 5th + ASCII D-7 / Saptamsa ONLY for saptamsa claims.\n"
             "Do not use D-5/D-9 as a substitute for D-7.\n"
             "Also PK, Jupiter, Beeja/Kshetra sphuta if present; NATAL Vimshottari for timing.\n"
@@ -410,6 +446,7 @@ TOPICS: list[TopicSpec] = [
             "- [ ] Quote D-24 center label if present; else mark insufficient for D-24\n"
             "- [ ] D-24 'As' sign = ____ (if present)\n"
             "- [ ] Optional D-5 label/'As' if used\n"
+            "- [ ] Associations of Mercury/Jupiter with 4th/5th/9th lords (conj/aspect/exchange)\n"
             "- [ ] Current natal Vimshottari MD + AD with start dates"
         ),
         focus=(
@@ -421,6 +458,13 @@ TOPICS: list[TopicSpec] = [
             "In D-24 (Siddhamsa), evaluate 4th/5th/9th axes and Saraswati/learning deity flavor. Use Mercury/Jupiter "
             "(and 5th/9th lords') nakshatra+pada and nakshatra-lords for learning style; gandanta may show disrupted "
             "education phases. Mention technical (Mars/Ketu/Saturn) vs traditional (Jupiter/Venus) inclinations.\n"
+            "Topic-specific yogas (mandatory scan — state present / partial-broken / absent with evidence):\n"
+            "1) Budhaditya (Sun–Mercury) for sharp intellect when clearly formed and unafflicted;\n"
+            "2) Gaja Kesari (Moon–Jupiter) for learning wisdom/recognition;\n"
+            "3) Saraswati / Vidya-type yogas (Mercury–Jupiter–Venus/5th–9th links) when supported;\n"
+            "4) Raja yogas involving 4th/5th/9th lords; Yogakaraka support to education houses;\n"
+            "5) Neecha Bhanga of Mercury/Jupiter/5th/9th lords; dusthana yogas delaying education;\n"
+            "6) D-24 confirmation/denial of Rasi education yogas when Siddhamsa is present.\n"
             "Primary Vargas: natal Rasi 4th/5th/9th + ASCII D-24 (Siddhamsa) when present; D-5 only as support.\n"
             "Do not invent a D-24 lagna if the block is missing.\n"
             "Use Mercury/Jupiter + NATAL Vimshottari education windows.\n"
@@ -439,6 +483,7 @@ TOPICS: list[TopicSpec] = [
             "- [ ] AK planet from Chara karaka table\n"
             "- [ ] Quote D-9 and any D-20 / D-60 center labels used\n"
             "- [ ] Each used varga's 'As' sign\n"
+            "- [ ] Associations of 5th/9th/12th lords with Ketu/Jupiter/AK (conj/aspect/exchange)\n"
             "- [ ] Current natal Vimshottari MD + AD; Moola Dasa line if used"
         ),
         focus=(
@@ -448,7 +493,14 @@ TOPICS: list[TopicSpec] = [
             "Assess AK in D-9 (Karakamsa) and Ishta Devata (12th from Karakamsa). Evaluate Ketu and Jupiter dignities; "
             "Vargottama/Pushkara of AK/Ketu/Jupiter when deducible. Use AK/Moon/Ketu nakshatra+pada, nakshatra-lord, and "
             "deity for sadhana style; D-20 upasana deity + Ishta from Karakamsa. Gandanta on AK/Ketu = intense spiritual "
-            "turns. Note Trikona strength vs dusthana renunciation pull; Pravrajya only if clearly supported.\n"
+            "turns. Note Trikona strength vs dusthana renunciation pull.\n"
+            "Topic-specific yogas (mandatory scan — state present / partial-broken / absent with evidence):\n"
+            "1) Dharma/moksha yogas (5th–9th–12th lord links; Jupiter–Ketu–9th associations);\n"
+            "2) Pravrajya / renunciation yogas only if clearly formed — otherwise state absent;\n"
+            "3) Tapasavi / strong Saturn–Jupiter–Ketu spiritual combinations when classical criteria fit;\n"
+            "4) Raja yogas involving 5th/9th that support teaching/guru roles; Sakata or other stress yogas if relevant;\n"
+            "5) Karakamsa / Ishta-linked spiritual promise from D-9 (+ D-20 when present);\n"
+            "6) Neecha Bhanga of AK/Ketu/Jupiter/9th lord; gandanta as intense spiritual turning points, not automatic yoga.\n"
             "Use AK, Ketu, Rasi 12th/9th/5th, ASCII D-9; include D-20/D-60 only if those blocks exist.\n"
             "Do not mix D-20 planets into D-60 claims or vice versa.\n"
             "Timing: NATAL Vimshottari; Moola Dasa only if the Moola table is present and quoted.\n"
@@ -470,6 +522,7 @@ TOPICS: list[TopicSpec] = [
             "- [ ] Current natal Vimshottari MD + AD with start dates (quote natal table only)\n"
             "- [ ] Secondary snapshot date/place (if any) used ONLY for planet signs\n"
             "- [ ] Transit Ju/Sa/Ra/Ke/Ma signs + natal houses (from TRANSIT / GOCHARA CORE)\n"
+            "- [ ] Natal yoga-relevant lords hit by transit Ju/Sa/Ra/Ke (quote natal house + transit house)\n"
             "- [ ] Explicitly affirm: no secondary-chart dasas used"
         ),
         focus=(
@@ -480,6 +533,14 @@ TOPICS: list[TopicSpec] = [
             "Include MD/AD lords' natal nakshatra-lords when explaining how a transit 'delivers'. Dusthana/Badhaka/gandanta "
             "hits explain stress; Upachaya hits explain growth-through-effort. "
             "Ground all transit triggers strictly within the running NATAL Vimshottari MD/AD's promise.\n"
+            "Topic-specific yogas (mandatory scan — state present / partial-broken / absent with evidence):\n"
+            "1) Identify which natal yogas (Raja/Dhana/Vipareeta Raja/Yogakaraka links, etc.) are activated this year "
+            "by transit Jupiter/Saturn/nodes on those lords or houses;\n"
+            "2) Double-transit yoga timing (Ju+Sa on same house/lord) — name house and expected life area;\n"
+            "3) Sade Sati / Ashtama Shani / Kantaka Shani patterns relative to Moon/Lagna;\n"
+            "4) Rahu–Ketu axis on kendra (1/7, 4/10) or natal yoga houses — disruption vs breakthrough;\n"
+            "5) Transit support or affliction to running MD/AD lords who carry natal yoga promise;\n"
+            "6) Do not invent new natal yogas from transit alone — only activate or frustrate yogas already in the natal chart.\n"
             "Base houses on natal Rasi; secondary snapshot is gochara positions only.\n"
             "HARD RULE: never take Vimshottari/Sudasa/Narayana from the secondary chart.\n"
             "Timing backbone = NATAL Vimshottari MD/AD with quoted dates; optional natal Narayana/Sudasa.\n"
@@ -636,7 +697,8 @@ Tone for this prediction (mandatory):
 Classical vitals to weigh when supported by the parse/chart facts:
 - House classes for topic lords: Kendra / Trikona / Dusthana / Upachaya / Maraka / Badhaka
 - Yogakaraka for Lagna (if identifiable) and its link to this topic
-- Yogas clearly present (Raja, Dhana, Vipareeta Raja, Neecha Bhanga, Parivartana, Cartari, named classics)
+- **Topic-specific yogas from the focus above** (mandatory scan) plus any clear Raja/Dhana/Vipareeta Raja/
+  Neecha Bhanga/Parivartana/Cartari/named classics that affect THIS topic
 - Planetary dignities (exaltation/own/moolatrikona/friend/enemy/debilitation), Vargottama/Pushkara, combustion/retrograde
 - Functional benefic/malefic status for this Lagna; dispositor chain; aspects (incl. Mars/Jupiter/Saturn special aspects)
 - Nakshatra + pada of Lagna/Moon/topic lords/karakas/dasa lords; nakshatra lord (Vimshottari) and deity theme
@@ -647,7 +709,8 @@ Classical vitals to weigh when supported by the parse/chart facts:
 
 Required response structure (sections 2–8 only; parse facts are already verified above):
 2. Key chart factors used (Yogakaraka / house-class / dignity / nakshatra-pada notes when relevant)
-3. Core promise / pattern — net assessment first (strong / mixed / challenged), then the yogas and combinations
+3. Core promise / pattern — net assessment first (strong / mixed / challenged), then **topic-specific yogas**
+   (present / partial-broken / absent with brief evidence) and other combinations that define the topic
 4. Strengths and supports — only factors actually present; no padding
 5. Challenges / cautions — explicit and specific when indicated (do not minimize); say "none material" only if truly so
 6. Timing notes (natal dasas / transits) — dates mandatory when timing is claimed; include difficult windows plainly; relate windows to current age/life stage

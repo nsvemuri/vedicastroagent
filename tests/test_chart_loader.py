@@ -151,6 +151,23 @@ def test_topics_include_remedy_guidance():
         assert "Simple remedies" in prompt
 
 
+def test_all_topics_require_topic_specific_yoga_scan():
+    from vedicastroagent.prompts import PREDICTION_SYSTEM_INSTRUCTION, build_prediction_prompt
+
+    assert "Topic-specific yogas are mandatory" in PREDICTION_SYSTEM_INSTRUCTION
+    for topic in TOPICS:
+        assert "Topic-specific yogas (mandatory scan" in topic.focus, topic.key
+        assert "present / partial-broken / absent" in topic.focus, topic.key
+        # Parse checklists should capture lord associations that feed yoga judgment.
+        assert "Associations" in topic.parse_checklist or topic.key == "transits"
+        if topic.key == "transits":
+            assert "yoga-relevant lords" in topic.parse_checklist
+    wealth = next(t for t in TOPICS if t.key == "wealth")
+    pred = build_prediction_prompt(wealth, "parse facts")
+    assert "Topic-specific yogas from the focus above" in pred
+    assert "topic-specific yogas" in pred
+
+
 def test_prediction_tone_is_fact_first():
     from vedicastroagent.prompts import PREDICTION_SYSTEM_INSTRUCTION, build_prediction_prompt
 
