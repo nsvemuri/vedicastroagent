@@ -665,6 +665,100 @@ def format_transit_rasi_core(chart: ChartDocument) -> str | None:
     return "\n".join(lines)
 
 
+def format_prediction_chart_payload(
+    chart: ChartDocument,
+    topic: str,
+    *,
+    as_of: date | None = None,
+    max_chars: int = 18000,
+) -> str:
+    """Authoritative prediction payload: natal core + topic Vargas + natal dasas + gochara.
+
+    Prediction must not claim these blocks are missing when inventory marks them FOUND.
+    """
+    as_of = as_of or date.today()
+    inventory: list[str] = []
+    body_parts: list[str] = []
+
+    natal_core = format_natal_rasi_core(chart, topic=topic)
+    inventory.append("NATAL RASI CORE: FOUND")
+    body_parts.append(natal_core)
+
+    # Topic Vargas (skip bare Rasi ASCII here — natal core already covers D-1 placements;
+    # still include Rasi diamond when it is the only varga for the topic, e.g. transits).
+    varga_labels = TOPIC_VARGAS.get(topic, ["Rasi"])
+    divisional_labels = [label for label in varga_labels if label.lower() != "rasi"]
+    if not divisional_labels:
+        divisional_labels = ["Rasi"]
+
+    varga_parts: list[str] = []
+    for label in divisional_labels:
+        block = extract_varga_block(chart.natal_text, label)
+        if block:
+            inventory.append(f"Varga {label}: FOUND")
+            varga_parts.append(f"--- Varga block: {label} ---\n{block}")
+        else:
+            inventory.append(f"Varga {label}: NOT FOUND in export")
+    if varga_parts:
+        body_parts.append(
+            "=== TOPIC DIVISIONAL CHARTS (ASCII; authoritative for varga claims) ===\n"
+            + "\n\n".join(varga_parts)
+        )
+    else:
+        body_parts.append(
+            "=== TOPIC DIVISIONAL CHARTS ===\n"
+            "(No topic divisional ASCII blocks found — limit varga claims accordingly.)"
+        )
+
+    # Natal dasas for this topic.
+    dasa_titles = TOPIC_DASAS.get(topic, ["Vimsottari Dasa"])
+    dasa_parts: list[str] = []
+    for title in dasa_titles:
+        block = extract_dasa_section(chart.natal_text, title)
+        if block:
+            inventory.append(f"Natal dasa '{title}': FOUND")
+            dasa_parts.append(block)
+        else:
+            inventory.append(f"Natal dasa '{title}': NOT FOUND in export")
+    vim_window = current_vimsottari_summary(chart, as_of_year=as_of.year)
+    if vim_window.strip():
+        inventory.append(f"Vimshottari windows near {as_of.year}: FOUND")
+        dasa_parts.insert(
+            0,
+            "=== VIMSHOTTARI WINDOWS NEAR ANALYSIS DATE ===\n" + vim_window.strip(),
+        )
+    if dasa_parts:
+        body_parts.append(
+            "=== NATAL DASA TABLES (use ONLY these for dasa timing; NOT secondary-chart dasas) ===\n"
+            + "\n\n".join(dasa_parts)
+        )
+    else:
+        body_parts.append(
+            "=== NATAL DASA TABLES ===\n"
+            "(No natal dasa tables found — say insufficient data for dasa timing only.)"
+        )
+
+    transit_core = format_transit_rasi_core(chart)
+    if transit_core:
+        inventory.append(
+            f"TRANSIT / GOCHARA CORE: FOUND "
+            f"(snapshot {chart.secondary_metadata.get('date', 'unknown')})"
+        )
+        body_parts.append(transit_core)
+    else:
+        inventory.append("TRANSIT / GOCHARA CORE: NOT FOUND (no secondary snapshot)")
+
+    header = (
+        "=== PAYLOAD INVENTORY (FOUND means present below — do not claim missing) ===\n"
+        + "\n".join(f"- {line}" for line in inventory)
+        + f"\n- Analysis / as-of date: {as_of.isoformat()}"
+    )
+    joined = header + "\n\n" + "\n\n".join(body_parts)
+    if len(joined) > max_chars:
+        return joined[:max_chars] + "\n\n[...prediction payload truncated for size...]"
+    return joined
+
+
 def parse_jh_date(value: str | None) -> date | None:
     """Parse common Jagannatha Hora date strings (e.g. 'March 15, 1981')."""
     if not value:

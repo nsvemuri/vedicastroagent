@@ -218,6 +218,7 @@ def test_prediction_prompt_includes_subject_age():
 def test_natal_rasi_core_payload_for_career_and_transits():
     from vedicastroagent.chart_loader import (
         format_natal_rasi_core,
+        format_prediction_chart_payload,
         format_transit_rasi_core,
         parse_body_longitude_table,
     )
@@ -262,7 +263,7 @@ def test_natal_rasi_core_payload_for_career_and_transits():
     )
     assert "AUTHORITATIVE CHART LOAD PAYLOAD" in pred_p
     assert "Lagna lord: Mars in Pi" in pred_p
-    assert "do not claim natal Lagna" in pred_p.lower() or "Do not claim natal Lagna" in pred_p
+    assert "Do not claim natal Lagna" in pred_p
 
     transit_pred = build_prediction_prompt(
         transits,
@@ -272,6 +273,27 @@ def test_natal_rasi_core_payload_for_career_and_transits():
     )
     assert "Natal Moon: Gemini" in transit_pred
     assert "Transit Jupiter" in transit_pred
+
+    from datetime import date
+
+    wealth_payload = format_prediction_chart_payload(chart, "wealth", as_of=date(2026, 8, 10))
+    assert "PAYLOAD INVENTORY" in wealth_payload
+    assert "Varga D-2: FOUND" in wealth_payload
+    assert "Varga D-4: FOUND" in wealth_payload
+    assert "Natal dasa 'Vimsottari Dasa': FOUND" in wealth_payload
+    assert "TRANSIT / GOCHARA CORE: FOUND" in wealth_payload
+    assert "Varga block: D-2" in wealth_payload
+    assert "Varga block: D-4" in wealth_payload
+    assert "NATAL DASA TABLES" in wealth_payload
+    wealth = next(t for t in TOPICS if t.key == "wealth")
+    wealth_pred = build_prediction_prompt(
+        wealth,
+        "parse facts",
+        chart_load_payload=wealth_payload,
+    )
+    assert "Varga D-2: FOUND" in wealth_pred
+    assert "natal dasas" in wealth_pred.lower()
+    assert "insufficient data" in wealth_pred.lower()  # only allowed for NOT FOUND items
 
 
 def test_two_phase_prompts_exist():

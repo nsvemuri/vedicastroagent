@@ -253,9 +253,12 @@ PREDICTION_SYSTEM_INSTRUCTION = SYSTEM_INSTRUCTION + f"""
 - When the subject's current age is provided, use it: frame timing, urgency, and life-stage guidance
   relative to that age (career phase, marriage/progeny windows, education stage, health/retirement themes).
   Do not give age-inappropriate advice (e.g. imminent childbearing or school exams) without acknowledging age.
-- A computed "NATAL RASI CORE" (and transit gochara core when present) is supplied with the prediction prompt.
-  Treat it as authoritative D-1 ground truth for Lagna, Moon, graha houses, and house-lord placements.
-  Never claim those natal positions were "not provided" when that block is present.
+- An authoritative **chart-load payload** is supplied with every prediction prompt. It includes:
+  PAYLOAD INVENTORY, NATAL RASI CORE, topic divisional ASCII charts (e.g. D-2/D-4 for wealth, D-10 for career),
+  NATAL DASA TABLES / Vimshottari windows, and TRANSIT/GOCHARA CORE when a secondary snapshot exists.
+- Treat inventory lines marked FOUND as present. Never claim D-2, D-4, D-9, D-10, natal dasas, or transit
+  data were "not provided" / "insufficient" when the inventory marks them FOUND or the blocks appear below.
+- Timing (section 6) must use the natal dasa tables and transit/gochara core from the payload when FOUND.
 
 {CLASSICAL_VEDIC_FRAMEWORK}
 """
@@ -642,6 +645,7 @@ def build_prediction_prompt(
     model_name: str | None = None,
     birth_date: str | None = None,
     subject_age: int | None = None,
+    chart_load_payload: str | None = None,
     natal_core_payload: str | None = None,
     transit_core_payload: str | None = None,
 ) -> str:
@@ -664,12 +668,17 @@ def build_prediction_prompt(
             f"Subject's current age as of {when}: unknown (birth date not detected). "
             "Do not invent an age; keep life-stage claims general."
         )
-    core_block = natal_core_payload.strip() if natal_core_payload else (
-        "(NATAL RASI CORE not supplied — use parse facts only for D-1.)"
-    )
-    transit_block = ""
-    if transit_core_payload and transit_core_payload.strip():
-        transit_block = f"\n\n{transit_core_payload.strip()}\n"
+    # Prefer the full chart-load payload; fall back to older natal/transit core args.
+    if chart_load_payload and chart_load_payload.strip():
+        payload_block = chart_load_payload.strip()
+    else:
+        core_block = natal_core_payload.strip() if natal_core_payload else (
+            "(NATAL RASI CORE not supplied — use parse facts only for D-1.)"
+        )
+        transit_block = ""
+        if transit_core_payload and transit_core_payload.strip():
+            transit_block = f"\n\n{transit_core_payload.strip()}"
+        payload_block = core_block + transit_block
     return f"""Interpret the following Vedic chart reading for {who}.
 
 {model_line}
@@ -677,10 +686,10 @@ Topic: {topic.title}
 Analysis date / reference: {when}
 {age_line}
 
-=== AUTHORITATIVE CHART LOAD PAYLOAD (computed; do not claim missing) ===
-{core_block}
-{transit_block}
-=== VERIFIED PARSE FACTS (temperature 0 — do not contradict; prefer payload above for D-1 positions) ===
+=== AUTHORITATIVE CHART LOAD PAYLOAD (computed; do not claim missing when inventory says FOUND) ===
+{payload_block}
+
+=== VERIFIED PARSE FACTS (temperature 0 — do not contradict; prefer payload above for D-1 / varga / dasa) ===
 {parse_summary}
 
 Topic-specific focus:
@@ -688,7 +697,10 @@ Topic-specific focus:
 
 Tone for this prediction (mandatory):
 - Ground every claim in the authoritative chart-load payload + verified parse facts / classical combinations.
-- Do not claim natal Lagna, Moon, graha houses, or house-lord positions are unavailable when the payload lists them.
+- Do not claim natal Lagna, Moon, graha houses, house-lords, topic Vargas (D-2/D-4/D-9/D-10/etc.), natal dasas,
+  or transit/gochara data are unavailable when the payload inventory marks them FOUND or the blocks appear above.
+- For timing notes, use NATAL DASA TABLES / Vimshottari windows and TRANSIT/GOCHARA CORE from the payload when FOUND;
+  do not write "insufficient data" for those when they are present.
 - Do not highlight positives more than the chart warrants; do not bury or soften negatives with diplomacy.
 - If the net indication is mixed or adverse, say so explicitly before offering guidance or remedies.
 - Prefer precise, sober wording over motivational or overly reassuring language.
@@ -713,7 +725,9 @@ Required response structure (sections 2–8 only; parse facts are already verifi
    (present / partial-broken / absent with brief evidence) and other combinations that define the topic
 4. Strengths and supports — only factors actually present; no padding
 5. Challenges / cautions — explicit and specific when indicated (do not minimize); say "none material" only if truly so
-6. Timing notes (natal dasas / transits) — dates mandatory when timing is claimed; include difficult windows plainly; relate windows to current age/life stage
+6. Timing notes — quote MD/AD (and Sudasa/Narayana if used) from the natal dasa payload; use transit/gochara
+   houses when present; include difficult windows plainly; relate to current age/life stage.
+   Say "insufficient" ONLY for items marked NOT FOUND in the payload inventory.
 7. Practical guidance — realistic actions given the net pattern and current age (not pep talk)
 8. Simple remedies (where applicable — tied to cited afflictions; skip or say none if chart is strong)
 """
