@@ -44,6 +44,21 @@ def test_claude_aliases_resolve():
     assert resolve_claude_model("claude-sonnet-5") == "claude-sonnet-5"
 
 
+def test_claude_opus_and_mythos_omit_temperature():
+    from vedicastroagent.llm import claude_sampling_kwargs, claude_supports_temperature
+
+    assert claude_supports_temperature("claude-sonnet-5")
+    assert claude_supports_temperature("claude-opus-4-6")
+    assert claude_supports_temperature("claude-opus-4-20250514")
+    assert not claude_supports_temperature("claude-opus-5")
+    assert not claude_supports_temperature("claude-opus-4-7")
+    assert not claude_supports_temperature("claude-opus-4-8")
+    assert not claude_supports_temperature("claude-mythos-5")
+    assert claude_sampling_kwargs("claude-sonnet-5", 0.05) == {"temperature": 0.05}
+    assert claude_sampling_kwargs("claude-opus-5", 0.05) == {}
+    assert claude_sampling_kwargs("claude-mythos-5", 0.0) == {}
+
+
 def test_resolve_provider_aliases():
     assert resolve_provider("gemini") == "gemini"
     assert resolve_provider("google") == "gemini"

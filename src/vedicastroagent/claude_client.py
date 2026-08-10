@@ -13,6 +13,7 @@ from .llm import (
     LLMClientConfig,
     PARSE_TEMPERATURE,
     PREDICTION_TEMPERATURE,
+    claude_sampling_kwargs,
     resolve_claude_model,
 )
 
@@ -68,14 +69,15 @@ class ClaudeClient:
         temperature: float | None = None,
         max_output_tokens: int | None = None,
     ) -> str:
+        temp = self.config.prediction_temperature if temperature is None else temperature
+        # Opus 4.7+ / Mythos: omit temperature entirely (API returns 400 if sent).
+        sampling = claude_sampling_kwargs(self.config.model, temp)
         response = self._client.messages.create(
             model=self.config.model,
             max_tokens=max_output_tokens or self.config.max_output_tokens,
-            temperature=(
-                self.config.prediction_temperature if temperature is None else temperature
-            ),
             system=system,
             messages=[{"role": "user", "content": user}],
+            **sampling,
         )
         parts: list[str] = []
         for block in response.content:
