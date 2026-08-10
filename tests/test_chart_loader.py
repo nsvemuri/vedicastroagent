@@ -174,8 +174,14 @@ def test_two_phase_prompts_exist():
     assert "Upachaya" in CLASSICAL_VEDIC_FRAMEWORK
     assert "Maraka" in CLASSICAL_VEDIC_FRAMEWORK
     assert "Badhaka" in CLASSICAL_VEDIC_FRAMEWORK
+    assert "Nakshatra" in CLASSICAL_VEDIC_FRAMEWORK
+    assert "Gandanta" in CLASSICAL_VEDIC_FRAMEWORK
+    assert "nakshatra lord" in CLASSICAL_VEDIC_FRAMEWORK.lower()
+    assert "Divisional (varga) deities" in CLASSICAL_VEDIC_FRAMEWORK
     assert "CLASSICAL VEDIC VITALS" in PREDICTION_SYSTEM_INSTRUCTION
     assert "Yogakaraka" in PREDICTION_SYSTEM_INSTRUCTION
+    assert "gandanta" in pred_p.lower()
+    assert "Nakshatra" in pred_p
 
 
 def test_resolve_workers_caps_to_topic_count():
