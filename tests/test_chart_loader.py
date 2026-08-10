@@ -60,6 +60,22 @@ def test_claude_models_omit_temperature():
         assert claude_sampling_kwargs(model, 0.0) == {}
 
 
+def test_claude_token_budgets_leave_room_for_thinking():
+    from vedicastroagent.claude_client import (
+        DEFAULT_CLAUDE_PARSE_MAX_TOKENS,
+        DEFAULT_CLAUDE_PREDICTION_MAX_TOKENS,
+        ClaudeConfig,
+    )
+
+    assert DEFAULT_CLAUDE_PARSE_MAX_TOKENS >= 16384
+    assert DEFAULT_CLAUDE_PREDICTION_MAX_TOKENS >= 32768
+    cfg = ClaudeConfig()
+    assert cfg.parse_max_output_tokens >= 16384
+    assert cfg.max_output_tokens >= 32768
+    assert cfg.parse_effort == "low"
+    assert cfg.prediction_effort == "medium"
+
+
 def test_resolve_provider_aliases():
     assert resolve_provider("gemini") == "gemini"
     assert resolve_provider("google") == "gemini"

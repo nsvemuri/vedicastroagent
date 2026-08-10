@@ -39,6 +39,8 @@ Build a CLI Vedic astrology agent that:
 - Parse temperature: **0**
 - Prediction temperature: **0.05**
 - Defined in `src/vedicastroagent/llm.py`
+- Claude Sonnet 5 / Opus 5: omit `temperature`; use higher `max_tokens` (parse 16k / predict 32k) and
+  `output_config.effort` (`low` parse / `medium` predict) so adaptive thinking does not exhaust the budget before text.
 
 ### Why prompts are strict
 

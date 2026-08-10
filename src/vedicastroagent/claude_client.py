@@ -18,14 +18,23 @@ from .llm import (
 )
 
 
+# Sonnet 5 / Opus 5 use adaptive thinking by default; thinking counts against max_tokens.
+# 4096 is often exhausted by thinking alone on chart parse prompts (empty text → error).
+DEFAULT_CLAUDE_PARSE_MAX_TOKENS = 16384
+DEFAULT_CLAUDE_PREDICTION_MAX_TOKENS = 32768
+
+
 @dataclass
 class ClaudeConfig:
     api_key: str | None = None
     model: str = DEFAULT_CLAUDE_MODEL
     parse_temperature: float = PARSE_TEMPERATURE
     prediction_temperature: float = PREDICTION_TEMPERATURE
-    parse_max_output_tokens: int = 4096
-    max_output_tokens: int = 16384
+    parse_max_output_tokens: int = DEFAULT_CLAUDE_PARSE_MAX_TOKENS
+    max_output_tokens: int = DEFAULT_CLAUDE_PREDICTION_MAX_TOKENS
+    # Lower effort on parse to leave budget for checklist text; medium for predictions.
+    parse_effort: str = "low"
+    prediction_effort: str = "medium"
 
     @property
     def provider(self) -> str:
@@ -68,25 +77,39 @@ class ClaudeClient:
         user: str,
         temperature: float | None = None,
         max_output_tokens: int | None = None,
+        effort: str | None = None,
     ) -> str:
         temp = self.config.prediction_temperature if temperature is None else temperature
-        # Sonnet 5 / Opus 4.7+ / Mythos: omit temperature (API returns 400 if sent).
+        # Sonnet 5 / Opus / Mythos: omit temperature (API returns 400 if sent).
         sampling = claude_sampling_kwargs(self.config.model, temp)
-        response = self._client.messages.create(
-            model=self.config.model,
-            max_tokens=max_output_tokens or self.config.max_output_tokens,
-            system=system,
-            messages=[{"role": "user", "content": user}],
+        create_kwargs: dict = {
+            "model": self.config.model,
+            "max_tokens": max_output_tokens or self.config.max_output_tokens,
+            "system": system,
+            "messages": [{"role": "user", "content": user}],
             **sampling,
-        )
+        }
+        if effort:
+            create_kwargs["output_config"] = {"effort": effort}
+        response = self._client.messages.create(**create_kwargs)
         parts: list[str] = []
+        block_types: list[str] = []
         for block in response.content:
+            block_types.append(str(getattr(block, "type", type(block).__name__)))
             text = getattr(block, "text", None)
             if text:
                 parts.append(text)
         text = "\n".join(parts).strip()
         if not text:
-            raise RuntimeError(f"Empty response from model {self.config.model}")
+            stop = getattr(response, "stop_reason", None)
+            usage = getattr(response, "usage", None)
+            out_tok = getattr(usage, "output_tokens", None) if usage else None
+            raise RuntimeError(
+                f"Empty response from model {self.config.model} "
+                f"(stop_reason={stop}, output_tokens={out_tok}, blocks={block_types}). "
+                "On Claude Sonnet 5 / Opus 5, adaptive thinking counts against max_tokens; "
+                "raise parse/prediction max_tokens or lower effort if stop_reason is max_tokens."
+            )
         return text
 
     def generate_parse(self, *, system: str, user: str) -> str:
@@ -95,6 +118,7 @@ class ClaudeClient:
             user=user,
             temperature=self.config.parse_temperature,
             max_output_tokens=self.config.parse_max_output_tokens,
+            effort=self._claude.parse_effort,
         )
 
     def generate_prediction(self, *, system: str, user: str) -> str:
@@ -103,6 +127,7 @@ class ClaudeClient:
             user=user,
             temperature=self.config.prediction_temperature,
             max_output_tokens=self.config.max_output_tokens,
+            effort=self._claude.prediction_effort,
         )
 
 
