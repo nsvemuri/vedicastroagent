@@ -39,10 +39,15 @@ Build a CLI Vedic astrology agent that:
 - Parse temperature: **0**
 - Prediction temperature: **0.05**
 - Defined in `src/vedicastroagent/llm.py`
-- Claude Sonnet 5 / Opus 5: omit `temperature`; use higher `max_tokens` (parse 16k / predict 32k) and
-  `output_config.effort` (`low` parse / `medium` predict) so adaptive thinking does not exhaust the budget before text.
+- Claude Sonnet 5 / Opus 5: omit `temperature`; default `max_tokens` parse **8192** / predict **16384** and
+  `output_config.effort` **low parse / medium predict** (override via `CLAUDE_*` env vars).
 - Claude calls must use **streaming** (`messages.stream` + `get_final_message`); the Anthropic SDK rejects
   non-streaming requests when high `max_tokens` implies >10 minutes.
+- Claude system prompts must use **ephemeral prompt caching** so the 14 topic calls reuse the same system text.
+- Chart payloads must be **topic-only**: no off-topic Vargas, no alias duplicates (Navamsa if D-9 exists),
+  natal sphuta/longitude table (110-line D-1 dump) included, Vimshottari **current + next** windows
+  (not the full historical dasa dump), transit gochara core on prediction (full secondary Rasi diamond
+  only for the transits topic). Parse prompts must not include prediction `focus` / remedies.
 
 ### Why prompts are strict
 

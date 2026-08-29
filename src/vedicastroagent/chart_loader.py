@@ -30,6 +30,25 @@ TOPIC_DASAS: dict[str, list[str]] = {
     "transits": ["Vimsottari Dasa", "Narayana Dasa", "Sudasa"],
 }
 
+# English aliases skipped when the D-n block is already extracted.
+_VARGA_SKIP_IF_PRIMARY = {
+    "Dasamsa": "D-10",
+    "Chaturthamsa": "D-4",
+    "Navamsa": "D-9",
+    "Saptamsa": "D-7",
+}
+
+# Extra longitude rows beyond Lagna + 9 grahas (topic-specific only).
+_TOPIC_EXTRA_LONGITUDE = {
+    "career": ("Arudha Lagna", "Hora Lagna", "Ghati Lagna"),
+    "wealth": ("Sree Lagna", "Indu Lagna", "Hora Lagna"),
+    "marriage": ("Maandi", "Mandi", "Gulika"),
+    "children": ("Beeja Sphuta", "Kshetra Sphuta"),
+    "education": (),
+    "spiritual": ("Bhrigu Bindu",),
+    "transits": (),
+}
+
 TOPIC_SECTION_HINTS: dict[str, list[str]] = {
     "career": [
         "Shadbala",
@@ -316,9 +335,11 @@ def extract_relevant_context(
     chart: ChartDocument,
     topic: str,
     *,
-    max_chars: int = 32000,
+    max_chars: int = 28000,
+    as_of: date | None = None,
 ) -> str:
-    """Build a focused chart excerpt for a life-area query."""
+    """Build a topic-only chart excerpt (Vargas/dasas for this life area only)."""
+    as_of = as_of or date.today()
     natal_core = format_natal_rasi_core(chart, topic=topic)
     parts: list[str] = [
         "=== NATAL CHART METADATA ===",
@@ -326,38 +347,17 @@ def extract_relevant_context(
         "",
         natal_core,
         "",
-        "=== NATAL LONGITUDE / KARAKA TABLE (D-1 body list) ===",
+        "=== NATAL LONGITUDE / KARAKA / SPHUTA TABLE (D-1 body list) ===",
         _header_table(chart.natal_text),
     ]
-    transit_core = format_transit_rasi_core(chart)
-    if transit_core and topic in {
-        "transits",
-        "career",
-        "wealth",
-        "marriage",
-        "children",
-        "education",
-        "spiritual",
-    }:
-        parts.extend(["", transit_core])
 
-    vargas = TOPIC_VARGAS.get(topic, ["Rasi"])
-    varga_parts: list[str] = []
-    for label in vargas:
-        block = extract_varga_block(chart.natal_text, label)
-        if block:
-            varga_parts.append(f"--- Varga block: {label} ---\n{block}")
+    varga_parts = _topic_varga_blocks(chart.natal_text, topic, include_rasi=True)
     if varga_parts:
         parts.extend(["", "=== LABELED DIVISIONAL / RASI ASCII CHARTS ===", *varga_parts])
     else:
         parts.append("\n(No labeled varga ASCII blocks matched for this topic.)")
 
-    dasa_titles = TOPIC_DASAS.get(topic, ["Vimsottari Dasa"])
-    dasa_parts: list[str] = []
-    for title in dasa_titles:
-        block = extract_dasa_section(chart.natal_text, title)
-        if block:
-            dasa_parts.append(block)
+    dasa_parts = _topic_dasa_blocks(chart, topic, as_of=as_of)
     if dasa_parts:
         parts.extend(
             [
@@ -370,35 +370,29 @@ def extract_relevant_context(
     hints = TOPIC_SECTION_HINTS.get(topic, [])
     extras = _excerpt_by_hints(
         chart.natal_text,
-        hints + ["Chara karaka", "Shadbala", "Ashtakavarga of Rasi Chart"],
-        max_chars=9000,
+        hints,
+        max_chars=4000,
         include_header=False,
+        window=16,
     )
     if extras.strip():
         parts.extend(["", "=== SUPPORTING NATAL SECTIONS ===", extras])
 
-    # Secondary chart: planetary positions only (gochara snapshot). Never its dasas.
-    if chart.secondary_text and topic in {
-        "transits",
-        "career",
-        "wealth",
-        "marriage",
-        "children",
-        "education",
-        "spiritual",
-    }:
-        secondary_body = _header_table(chart.secondary_text)
-        secondary_rasi = extract_varga_block(chart.secondary_text, "Rasi")
-        parts.extend(
-            [
-                "",
-                "=== SECONDARY / TRANSIT SNAPSHOT (planetary positions only; NOT natal dasas) ===",
-                _format_metadata(chart.secondary_metadata),
-                secondary_body,
-            ]
-        )
-        if secondary_rasi:
-            parts.extend(["", "--- Transit snapshot Rasi ---", secondary_rasi])
+    # Gochara only for the transit topic. Other topics get houses from natal core;
+    # prediction payload still injects TRANSIT / GOCHARA CORE for timing.
+    if topic == "transits":
+        transit_core = format_transit_rasi_core(chart)
+        if transit_core:
+            parts.extend(["", transit_core])
+        elif chart.secondary_text:
+            parts.extend(
+                [
+                    "",
+                    "=== SECONDARY / TRANSIT SNAPSHOT (planetary positions only; NOT natal dasas) ===",
+                    _format_metadata(chart.secondary_metadata),
+                    compact_longitude_table(chart.secondary_text, "transits"),
+                ]
+            )
 
     joined = "\n".join(parts).strip()
     if len(joined) > max_chars:
@@ -406,30 +400,100 @@ def extract_relevant_context(
     return joined
 
 
-def current_vimsottari_summary(chart: ChartDocument, as_of_year: int | None = None) -> str:
-    """Pick the Vimsottari mahadasa/antardasa lines around 'now' when possible."""
+def current_vimsottari_summary(
+    chart: ChartDocument,
+    as_of_year: int | None = None,
+    *,
+    as_of: date | None = None,
+) -> str:
+    """Current Vimshottari MD/AD plus the next AD and next MD window."""
+    if as_of is None and as_of_year is not None:
+        as_of = date(as_of_year, 7, 1)
+    if as_of is not None:
+        labeled = vimsottari_current_and_next(chart, as_of)
+        if labeled:
+            return labeled
+    section = extract_dasa_section(chart.natal_text, "Vimsottari Dasa") or ""
+    return section[:3500]
+
+
+def vimsottari_current_and_next(chart: ChartDocument, as_of: date) -> str:
+    """Label current MD/AD and the next AD / next MD from natal Vimshottari."""
     section = extract_dasa_section(chart.natal_text, "Vimsottari Dasa") or ""
     if not section:
         return ""
-    if as_of_year is None:
+    blocks = _parse_vimsottari_blocks(section)
+    if not blocks:
         return section[:3500]
 
-    lines = [ln for ln in section.splitlines() if ln.strip()]
-    relevant: list[str] = []
-    current_md = ""
-    for ln in lines:
+    current_idx = 0
+    for i, block in enumerate(blocks):
+        start = block["start"]
+        if start is not None and start <= as_of:
+            current_idx = i
+
+    current = blocks[current_idx]
+    ads = sorted(current["ads"], key=lambda item: item[1])
+    current_ad = ads[0] if ads else None
+    next_ad = None
+    for name, start in ads:
+        if start <= as_of:
+            current_ad = (name, start)
+        elif next_ad is None:
+            next_ad = (name, start)
+            break
+
+    parts = [
+        f"=== CURRENT VIMSHOTTARI (as of {as_of.isoformat()}) ===",
+        f"Mahadasa: {current['md']}"
+        + (
+            f"; current AD: {current_ad[0]} from {current_ad[1].isoformat()}"
+            if current_ad
+            else ""
+        ),
+        *current["lines"],
+    ]
+    if next_ad:
+        parts.extend(
+            [
+                f"=== NEXT ANTARDASA ===",
+                f"{next_ad[0]} starts {next_ad[1].isoformat()} (still in {current['md']} MD)",
+            ]
+        )
+    if current_idx + 1 < len(blocks):
+        nxt = blocks[current_idx + 1]
+        nxt_start = nxt["start"].isoformat() if nxt["start"] else "unknown"
+        parts.extend(
+            [
+                f"=== NEXT MAHADASA ===",
+                f"{nxt['md']} starts {nxt_start}",
+                *nxt["lines"][:12],
+            ]
+        )
+    return "\n".join(parts)
+
+
+def _parse_vimsottari_blocks(section: str) -> list[dict]:
+    date_re = re.compile(r"([A-Za-z]+)\s+(\d{4}-\d{2}-\d{2})")
+    blocks: list[dict] = []
+    current: dict | None = None
+    for ln in section.splitlines():
         md_match = re.match(r"^([A-Za-z]+)\s+[A-Za-z]+\s+\d{4}-", ln)
         if md_match:
-            current_md = md_match.group(1)
-        years = [int(y) for y in re.findall(r"\b(19\d{2}|20\d{2})\b", ln)]
-        if years and any(as_of_year - 1 <= y <= as_of_year + 10 for y in years):
-            if current_md and (not relevant or not relevant[-1].startswith(current_md)):
-                # Keep mahadasa identity visible even on continuation slices.
-                relevant.append(f"[Mahadasa context: {current_md}]")
-            relevant.append(ln)
-        elif not years and "Dasa" in ln:
-            relevant.append(ln)
-    return "\n".join(relevant[:50]) if relevant else section[:3500]
+            current = {"md": md_match.group(1), "lines": [ln], "ads": []}
+            blocks.append(current)
+        elif current is not None:
+            current["lines"].append(ln)
+        if current is None:
+            continue
+        for name, raw in date_re.findall(ln):
+            try:
+                current["ads"].append((name, date.fromisoformat(raw)))
+            except ValueError:
+                continue
+    for block in blocks:
+        block["start"] = min((d for _, d in block["ads"]), default=None)
+    return blocks
 
 
 def _varga_label_pattern(label: str) -> re.Pattern[str]:
@@ -456,12 +520,109 @@ def _header_table(text: str, max_lines: int = 110) -> str:
     return "\n".join(chunk)
 
 
+def compact_longitude_table(text: str | None, topic: str | None = None) -> str:
+    """Longitude rows for Lagna + 9 grahas plus a few topic-specific points."""
+    if not text:
+        return "(longitude table not detected)"
+    lines = text.splitlines()
+    start = 0
+    for idx, line in enumerate(lines):
+        if re.search(r"Body\s+Longitude", line, re.I):
+            start = idx
+            break
+    wanted = [b.lower() for b in _CLASSICAL_BODIES]
+    extras = [e.lower() for e in _TOPIC_EXTRA_LONGITUDE.get(topic or "", ())]
+    kept: list[str] = [lines[start]] if start < len(lines) else []
+    for line in lines[start + 1 : start + 90]:
+        head = line.strip().lower()
+        if not head:
+            continue
+        if any(head.startswith(name) for name in wanted):
+            kept.append(line)
+            continue
+        if extras and any(extra in head[:40] for extra in extras):
+            kept.append(line)
+    return "\n".join(kept) if len(kept) > 1 else _header_table(text, max_lines=18)
+
+
+def _topic_varga_blocks(
+    natal_text: str,
+    topic: str,
+    *,
+    include_rasi: bool,
+) -> list[str]:
+    """ASCII vargas for this topic; skip Rasi (natal core) and English aliases of found D-n."""
+    found_labels: set[str] = set()
+    blocks: list[str] = []
+    for label in TOPIC_VARGAS.get(topic, ["Rasi"]):
+        if label.lower() == "rasi" and not include_rasi:
+            continue
+        primary = _VARGA_SKIP_IF_PRIMARY.get(label)
+        if primary and primary in found_labels:
+            continue
+        block = extract_varga_block(natal_text, label)
+        if not block:
+            continue
+        found_labels.add(label)
+        blocks.append(f"--- Varga block: {label} ---\n{block}")
+    return blocks
+
+
+def _topic_dasa_blocks(
+    chart: ChartDocument,
+    topic: str,
+    *,
+    as_of: date,
+) -> list[str]:
+    """Current + next dasa windows (not the full historical JH dump)."""
+    parts: list[str] = []
+    vim = current_vimsottari_summary(chart, as_of=as_of)
+    if vim.strip():
+        parts.append(vim.strip())
+    for title in TOPIC_DASAS.get(topic, ["Vimsottari Dasa"]):
+        if title.lower().startswith("vimsottari"):
+            continue
+        block = extract_dasa_section(chart.natal_text, title)
+        if not block:
+            continue
+        slice_ = _dasa_window_slice(block, as_of.year, max_chars=2200)
+        parts.append(f"{title} (current + next window):\n{slice_}")
+    return parts
+
+
+def _dasa_window_slice(section: str, as_of_year: int, *, max_chars: int) -> str:
+    lines = [ln for ln in section.splitlines() if ln.strip()]
+    relevant: list[str] = []
+    for ln in lines[:8]:
+        if "Dasa" in ln or "Sudasa" in ln or "Narayana" in ln or "Moola" in ln:
+            relevant.append(ln)
+    for ln in lines:
+        years = [int(y) for y in re.findall(r"\b(19\d{2}|20\d{2})\b", ln)]
+        if years and any(as_of_year - 1 <= y <= as_of_year + 12 for y in years):
+            relevant.append(ln)
+    if not relevant:
+        relevant = lines[:20]
+    # Deduplicate while preserving order.
+    seen: set[str] = set()
+    ordered: list[str] = []
+    for ln in relevant:
+        if ln in seen:
+            continue
+        seen.add(ln)
+        ordered.append(ln)
+    text = "\n".join(ordered)
+    if len(text) > max_chars:
+        return text[:max_chars] + "\n[...dasa window truncated...]"
+    return text
+
+
 def _excerpt_by_hints(
     text: str,
     hints: Iterable[str],
     *,
     max_chars: int,
     include_header: bool = True,
+    window: int = 24,
 ) -> str:
     lines = text.splitlines()
     if not hints:
@@ -482,7 +643,7 @@ def _excerpt_by_hints(
                 continue
             if pattern.search(line):
                 start = max(0, idx - 1)
-                end = min(len(lines), idx + 24)
+                end = min(len(lines), idx + window)
                 used.update(range(start, end))
 
     ordered = [lines[i] for i in sorted(used)]
@@ -642,7 +803,7 @@ def format_transit_rasi_core(chart: ChartDocument) -> str | None:
     lagna_sign = natal.get("Lagna", {}).get("rasi")
     snap_date = chart.secondary_metadata.get("date", "unknown")
     lines = [
-        "=== TRANSIT / GOCHARA CORE (from secondary snapshot; positions only) ===",
+        "=== TRANSIT / GOCHARA CORE (from secondary snapshot; positions only; NOT natal dasas) ===",
         f"Snapshot date: {snap_date}",
     ]
     if lagna_sign:
@@ -670,7 +831,7 @@ def format_prediction_chart_payload(
     topic: str,
     *,
     as_of: date | None = None,
-    max_chars: int = 18000,
+    max_chars: int = 20000,
 ) -> str:
     """Authoritative prediction payload: natal core + topic Vargas + natal dasas + gochara.
 
@@ -683,20 +844,26 @@ def format_prediction_chart_payload(
     natal_core = format_natal_rasi_core(chart, topic=topic)
     inventory.append("NATAL RASI CORE: FOUND")
     body_parts.append(natal_core)
+    sphuta = _header_table(chart.natal_text)
+    if sphuta.strip():
+        inventory.append("NATAL SPHUTA / LONGITUDE TABLE: FOUND")
+        body_parts.append(
+            "=== NATAL LONGITUDE / KARAKA / SPHUTA TABLE (D-1 body list) ===\n" + sphuta
+        )
 
-    # Topic Vargas (skip bare Rasi ASCII here — natal core already covers D-1 placements;
-    # still include Rasi diamond when it is the only varga for the topic, e.g. transits).
-    varga_labels = TOPIC_VARGAS.get(topic, ["Rasi"])
-    divisional_labels = [label for label in varga_labels if label.lower() != "rasi"]
-    if not divisional_labels:
-        divisional_labels = ["Rasi"]
-
-    varga_parts: list[str] = []
-    for label in divisional_labels:
-        block = extract_varga_block(chart.natal_text, label)
-        if block:
+    # Topic Vargas: skip Rasi ASCII (natal core) and English aliases of found D-n charts.
+    requested = [lb for lb in TOPIC_VARGAS.get(topic, ["Rasi"]) if lb.lower() != "rasi"]
+    varga_parts = _topic_varga_blocks(chart.natal_text, topic, include_rasi=False)
+    found_from_blocks = {
+        line.split("Varga block: ", 1)[1].split(" ---", 1)[0]
+        for line in "\n".join(varga_parts).splitlines()
+        if line.startswith("--- Varga block:")
+    }
+    for label in requested:
+        if label in found_from_blocks:
             inventory.append(f"Varga {label}: FOUND")
-            varga_parts.append(f"--- Varga block: {label} ---\n{block}")
+        elif _VARGA_SKIP_IF_PRIMARY.get(label) in found_from_blocks:
+            inventory.append(f"Varga {label}: SKIPPED (same chart as {_VARGA_SKIP_IF_PRIMARY[label]})")
         else:
             inventory.append(f"Varga {label}: NOT FOUND in export")
     if varga_parts:
@@ -710,23 +877,20 @@ def format_prediction_chart_payload(
             "(No topic divisional ASCII blocks found — limit varga claims accordingly.)"
         )
 
-    # Natal dasas for this topic.
-    dasa_titles = TOPIC_DASAS.get(topic, ["Vimsottari Dasa"])
-    dasa_parts: list[str] = []
-    for title in dasa_titles:
-        block = extract_dasa_section(chart.natal_text, title)
-        if block:
-            inventory.append(f"Natal dasa '{title}': FOUND")
-            dasa_parts.append(block)
+    dasa_parts = _topic_dasa_blocks(chart, topic, as_of=as_of)
+    for title in TOPIC_DASAS.get(topic, ["Vimsottari Dasa"]):
+        if title.lower().startswith("vimsottari"):
+            if any("CURRENT VIMSHOTTARI" in p or "VIMSHOTTARI" in p for p in dasa_parts):
+                inventory.append(f"Natal dasa '{title}': FOUND")
+            else:
+                inventory.append(f"Natal dasa '{title}': NOT FOUND in export")
         else:
-            inventory.append(f"Natal dasa '{title}': NOT FOUND in export")
-    vim_window = current_vimsottari_summary(chart, as_of_year=as_of.year)
-    if vim_window.strip():
-        inventory.append(f"Vimshottari windows near {as_of.year}: FOUND")
-        dasa_parts.insert(
-            0,
-            "=== VIMSHOTTARI WINDOWS NEAR ANALYSIS DATE ===\n" + vim_window.strip(),
-        )
+            if any(p.startswith(f"{title} ") or p.startswith(title) for p in dasa_parts):
+                inventory.append(f"Natal dasa '{title}': FOUND")
+            else:
+                inventory.append(f"Natal dasa '{title}': NOT FOUND in export")
+    if any("CURRENT VIMSHOTTARI" in p or "NEXT MAHADASA" in p for p in dasa_parts):
+        inventory.append(f"Vimshottari current + next windows as of {as_of.year}: FOUND")
     if dasa_parts:
         body_parts.append(
             "=== NATAL DASA TABLES (use ONLY these for dasa timing; NOT secondary-chart dasas) ===\n"

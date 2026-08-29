@@ -171,18 +171,18 @@ class VedicAstroAgent:
         birth_date: str | None,
         subject_age: int | None,
     ) -> TopicResult:
-        context = extract_relevant_context(chart, topic.key)
-        # as_of_year is passed for transit window context; full date is reconstructed in payload via label.
         as_of_date = date.fromisoformat(as_of_label)
+        context = extract_relevant_context(chart, topic.key, as_of=as_of_date)
         chart_payload = format_prediction_chart_payload(
             chart,
             topic.key,
             as_of=as_of_date,
         )
         if topic.key == "transits":
-            dasa = current_vimsottari_summary(chart, as_of_year=as_of_year)
-            if dasa:
-                context += "\n\n=== VIMSHOTTARI WINDOWS NEAR ANALYSIS DATE ===\n" + dasa
+            if "CURRENT VIMSHOTTARI" not in context and "VIMSHOTTARI WINDOWS" not in context:
+                dasa = current_vimsottari_summary(chart, as_of_year=as_of_year)
+                if dasa:
+                    context += "\n\n=== VIMSHOTTARI WINDOWS NEAR ANALYSIS DATE ===\n" + dasa
             context += (
                 f"\n\nAnalysis reference date: {as_of_label}. "
                 "Provide a forward 12-month outlook from this date."

@@ -220,8 +220,8 @@ def _dry_run(
 
     selected = _select_topics(topics)
     for topic in selected:
-        ctx = extract_relevant_context(chart, topic.key)
-        if topic.key == "transits":
+        ctx = extract_relevant_context(chart, topic.key, as_of=as_of)
+        if topic.key == "transits" and "CURRENT VIMSHOTTARI" not in ctx and "VIMSHOTTARI WINDOWS" not in ctx:
             ctx += "\n" + current_vimsottari_summary(chart, as_of_year=as_of.year)
         has_d2 = "Varga block: D-2" in ctx
         has_dasa = "NATAL DASA TABLES" in ctx

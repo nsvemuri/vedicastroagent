@@ -18,10 +18,27 @@ from .llm import (
 )
 
 
-# Sonnet 5 / Opus 5 use adaptive thinking by default; thinking counts against max_tokens.
-# 4096 is often exhausted by thinking alone on chart parse prompts (empty text → error).
-DEFAULT_CLAUDE_PARSE_MAX_TOKENS = 16384
-DEFAULT_CLAUDE_PREDICTION_MAX_TOKENS = 32768
+# Adaptive thinking counts against max_tokens. Keep enough room for text, but
+# avoid 16k/32k defaults — those inflate thinking spend. Env can raise them.
+DEFAULT_CLAUDE_PARSE_MAX_TOKENS = 8192
+DEFAULT_CLAUDE_PREDICTION_MAX_TOKENS = 16384
+
+
+def _env_int(name: str, default: int) -> int:
+    raw = os.getenv(name)
+    if not raw:
+        return default
+    try:
+        return max(1024, int(raw))
+    except ValueError:
+        return default
+
+
+def _env_effort(name: str, default: str) -> str:
+    raw = (os.getenv(name) or default).strip().lower()
+    if raw in {"low", "medium", "high", "xhigh", "max"}:
+        return raw
+    return default
 
 
 @dataclass
@@ -32,7 +49,7 @@ class ClaudeConfig:
     prediction_temperature: float = PREDICTION_TEMPERATURE
     parse_max_output_tokens: int = DEFAULT_CLAUDE_PARSE_MAX_TOKENS
     max_output_tokens: int = DEFAULT_CLAUDE_PREDICTION_MAX_TOKENS
-    # Lower effort on parse to leave budget for checklist text; medium for predictions.
+    # Parse stays low (extraction). Prediction uses medium so analysis quality holds.
     parse_effort: str = "low"
     prediction_effort: str = "medium"
 
@@ -60,6 +77,16 @@ class ClaudeClient:
             self._claude.model = resolve_claude_model(os.getenv("CLAUDE_MODEL"))
         else:
             self._claude.model = resolve_claude_model(self._claude.model)
+        self._claude.parse_max_output_tokens = _env_int(
+            "CLAUDE_PARSE_MAX_TOKENS", self._claude.parse_max_output_tokens
+        )
+        self._claude.max_output_tokens = _env_int(
+            "CLAUDE_PREDICTION_MAX_TOKENS", self._claude.max_output_tokens
+        )
+        self._claude.parse_effort = _env_effort("CLAUDE_PARSE_EFFORT", self._claude.parse_effort)
+        self._claude.prediction_effort = _env_effort(
+            "CLAUDE_PREDICTION_EFFORT", self._claude.prediction_effort
+        )
         self._client = Anthropic(api_key=api_key)
         self.config = LLMClientConfig(
             provider="claude",
@@ -82,10 +109,17 @@ class ClaudeClient:
         temp = self.config.prediction_temperature if temperature is None else temperature
         # Sonnet 5 / Opus / Mythos: omit temperature (API returns 400 if sent).
         sampling = claude_sampling_kwargs(self.config.model, temp)
+        # Cache the shared system prompt across the 14 parse/predict topic calls (5-min TTL).
         create_kwargs: dict = {
             "model": self.config.model,
             "max_tokens": max_output_tokens or self.config.max_output_tokens,
-            "system": system,
+            "system": [
+                {
+                    "type": "text",
+                    "text": system,
+                    "cache_control": {"type": "ephemeral"},
+                }
+            ],
             "messages": [{"role": "user", "content": user}],
             **sampling,
         }

@@ -67,11 +67,11 @@ def test_claude_token_budgets_leave_room_for_thinking():
         ClaudeConfig,
     )
 
-    assert DEFAULT_CLAUDE_PARSE_MAX_TOKENS >= 16384
-    assert DEFAULT_CLAUDE_PREDICTION_MAX_TOKENS >= 32768
+    assert DEFAULT_CLAUDE_PARSE_MAX_TOKENS >= 8192
+    assert DEFAULT_CLAUDE_PREDICTION_MAX_TOKENS >= 16384
     cfg = ClaudeConfig()
-    assert cfg.parse_max_output_tokens >= 16384
-    assert cfg.max_output_tokens >= 32768
+    assert cfg.parse_max_output_tokens >= 8192
+    assert cfg.max_output_tokens >= 16384
     assert cfg.parse_effort == "low"
     assert cfg.prediction_effort == "medium"
 
@@ -103,8 +103,11 @@ def test_claude_client_uses_streaming_for_long_requests(monkeypatch):
 
         def stream(self, **kwargs):
             self.stream_calls += 1
-            assert kwargs["max_tokens"] >= 16384
+            assert kwargs["max_tokens"] >= 8192
             assert "temperature" not in kwargs
+            system = kwargs["system"]
+            assert isinstance(system, list)
+            assert system[0].get("cache_control") == {"type": "ephemeral"}
             return FakeStream()
 
         def create(self, **kwargs):
@@ -188,10 +191,16 @@ def test_wealth_context_labels_d2_d4_and_natal_dasas():
     assert "Varga block: D-2" in ctx
     assert "Varga block: D-4" in ctx
     assert "NATAL DASA TABLES" in ctx
-    assert "Vimsottari Dasa" in ctx
-    assert "NOT natal dasas" in ctx
+    assert "VIMSHOTTARI" in ctx.upper()
+    assert "secondary-chart dasas" in ctx
     # Must not confuse Hora Lord section as the D-2 chart source of truth alone.
     assert "Hora Lord" not in ctx.split("Varga block: D-2")[1].split("Varga block:")[0]
+    assert "Mrityu Sphuta" in ctx
+    assert "Beeja Sphuta" in ctx
+    assert "CURRENT VIMSHOTTARI" in ctx
+    assert "NEXT MAHADASA" in ctx or "NEXT ANTARDASA" in ctx
+    # Cost trim that does not drop sphutas: no secondary Rasi diamond on wealth parse.
+    assert "--- Transit snapshot Rasi ---" not in ctx
 
 
 def test_topic_context_not_empty():
@@ -356,8 +365,11 @@ def test_natal_rasi_core_payload_for_career_and_transits():
 
     wealth_payload = format_prediction_chart_payload(chart, "wealth", as_of=date(2026, 8, 10))
     assert "PAYLOAD INVENTORY" in wealth_payload
+    assert "SPHUTA TABLE" in wealth_payload
+    assert "CURRENT VIMSHOTTARI" in wealth_payload
     assert "Varga D-2: FOUND" in wealth_payload
     assert "Varga D-4: FOUND" in wealth_payload
+    assert "Chaturthamsa" in wealth_payload and "SKIPPED" in wealth_payload
     assert "Natal dasa 'Vimsottari Dasa': FOUND" in wealth_payload
     assert "TRANSIT / GOCHARA CORE: FOUND" in wealth_payload
     assert "Varga block: D-2" in wealth_payload
@@ -387,6 +399,8 @@ def test_two_phase_prompts_exist():
     assert "Do NOT interpret" in parse_p
     assert "temperature 0" in parse_p
     assert "CLASSICAL VEDIC VITALS" not in parse_p  # full framework is prediction-only
+    assert "Simple Remedies" not in parse_p  # parse must not ship prediction focus
+    assert "PARSE-FIRST PROTOCOL" not in parse_p  # already in parse system prompt
     pred_p = build_prediction_prompt(topic, "parse facts here")
     assert "VERIFIED PARSE FACTS" in pred_p
     assert "sections 2–8" in pred_p
@@ -405,6 +419,27 @@ def test_two_phase_prompts_exist():
     assert "Yogakaraka" in PREDICTION_SYSTEM_INSTRUCTION
     assert "gandanta" in pred_p.lower()
     assert "Nakshatra" in pred_p
+
+
+def test_topic_payloads_omit_off_topic_chart_dumps():
+    from datetime import date
+
+    from vedicastroagent.chart_loader import format_prediction_chart_payload
+
+    chart = load_chart_file(FIXTURE)
+    career_ctx = extract_relevant_context(chart, "career", as_of=date(2026, 8, 10))
+    wealth_ctx = extract_relevant_context(chart, "wealth", as_of=date(2026, 8, 10))
+    # Career must not pull D-2/D-4; wealth must not pull D-10.
+    assert "Varga block: D-10" in career_ctx
+    assert "Varga block: D-2" not in career_ctx
+    assert "Varga block: D-2" in wealth_ctx
+    assert "Varga block: D-10" not in wealth_ctx
+    # Alias duplicates and secondary Rasi diamonds stay out of prediction payload.
+    marriage_payload = format_prediction_chart_payload(chart, "marriage", as_of=date(2026, 8, 10))
+    assert "Varga D-9: FOUND" in marriage_payload
+    assert "Varga block: Navamsa" not in marriage_payload
+    assert "CURRENT VIMSHOTTARI" in wealth_ctx
+    assert "Mrityu Sphuta" in wealth_ctx
 
 
 def test_resolve_workers_caps_to_topic_count():

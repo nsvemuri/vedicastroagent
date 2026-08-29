@@ -617,11 +617,6 @@ def build_parse_prompt(
 Topic context: {topic.title}
 Reference date: {when}
 
-{PARSE_GUARDRAILS}
-
-Topic-specific varga/dasa focus (for knowing what to extract):
-{topic.focus}
-
 Complete this checklist with quoted evidence from the chart data (use 'insufficient data' if missing):
 {topic.parse_checklist}
 
