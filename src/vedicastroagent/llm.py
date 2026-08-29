@@ -26,6 +26,22 @@ CLAUDE_MODEL_ALIASES: dict[str, str] = {
 DEFAULT_CLAUDE_ALIAS = "sonnet"
 DEFAULT_CLAUDE_MODEL = CLAUDE_MODEL_ALIASES[DEFAULT_CLAUDE_ALIAS]
 
+# Prediction output budget. Claude adaptive thinking counts against this ceiling.
+# Spiritual (D-9 / D-20 / Karakamsa + 6 yogas) needs more room than other topics.
+DEFAULT_PREDICTION_MAX_OUTPUT_TOKENS = 20480
+DENSE_TOPIC_PREDICTION_MAX_OUTPUT_TOKENS = 24576
+DENSE_PREDICTION_TOPICS = frozenset({"spiritual"})
+
+
+def prediction_max_output_tokens(topic_key: str, default: int) -> int:
+    """Raise the per-call ceiling for dense topics without shrinking a user override."""
+    floor = (
+        DENSE_TOPIC_PREDICTION_MAX_OUTPUT_TOKENS
+        if topic_key in DENSE_PREDICTION_TOPICS
+        else default
+    )
+    return max(default, floor)
+
 
 @runtime_checkable
 class LLMClient(Protocol):
@@ -36,7 +52,9 @@ class LLMClient(Protocol):
 
     def generate_parse(self, *, system: str, user: str) -> str: ...
 
-    def generate_prediction(self, *, system: str, user: str) -> str: ...
+    def generate_prediction(
+        self, *, system: str, user: str, max_output_tokens: int | None = None
+    ) -> str: ...
 
 
 @dataclass
@@ -46,7 +64,7 @@ class LLMClientConfig:
     parse_temperature: float = PARSE_TEMPERATURE
     prediction_temperature: float = PREDICTION_TEMPERATURE
     parse_max_output_tokens: int = 4096
-    max_output_tokens: int = 16384
+    max_output_tokens: int = 20480
 
 
 def resolve_provider(provider: str | None = None) -> str:

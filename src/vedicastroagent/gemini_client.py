@@ -10,6 +10,7 @@ from google.genai import types
 
 from .llm import (
     DEFAULT_GEMINI_MODEL,
+    DEFAULT_PREDICTION_MAX_OUTPUT_TOKENS,
     LLMClientConfig,
     PARSE_TEMPERATURE,
     PREDICTION_TEMPERATURE,
@@ -26,7 +27,7 @@ class GeminiConfig:
     parse_temperature: float = PARSE_TEMPERATURE
     prediction_temperature: float = PREDICTION_TEMPERATURE
     parse_max_output_tokens: int = 4096
-    max_output_tokens: int = 16384
+    max_output_tokens: int = DEFAULT_PREDICTION_MAX_OUTPUT_TOKENS
 
     @property
     def provider(self) -> str:
@@ -49,6 +50,12 @@ class GeminiClient:
         self._gemini.api_key = api_key
         if self._gemini.model == DEFAULT_GEMINI_MODEL:
             self._gemini.model = os.getenv("GEMINI_MODEL", self._gemini.model)
+        raw_predict = os.getenv("GEMINI_PREDICTION_MAX_TOKENS")
+        if raw_predict:
+            try:
+                self._gemini.max_output_tokens = max(1024, int(raw_predict))
+            except ValueError:
+                pass
         self._client = genai.Client(api_key=api_key)
         self.config = LLMClientConfig(
             provider="gemini",
@@ -91,10 +98,12 @@ class GeminiClient:
             max_output_tokens=self.config.parse_max_output_tokens,
         )
 
-    def generate_prediction(self, *, system: str, user: str) -> str:
+    def generate_prediction(
+        self, *, system: str, user: str, max_output_tokens: int | None = None
+    ) -> str:
         return self.generate(
             system=system,
             user=user,
             temperature=self.config.prediction_temperature,
-            max_output_tokens=self.config.max_output_tokens,
+            max_output_tokens=max_output_tokens or self.config.max_output_tokens,
         )

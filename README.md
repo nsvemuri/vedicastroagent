@@ -52,7 +52,7 @@ Generation defaults (shared by both providers):
 | Prediction temperature | **0.05** | Interpretation/prediction (minimal sampling) |
 | Topic parallelism | **parallel** | Each life-area query is an independent LLM call |
 | Claude effort | **low parse / medium predict** | Extraction stays cheap; interpretation keeps medium thinking |
-| Claude max tokens | **8k parse / 16k predict** | Room for thinking + full sections; override `CLAUDE_*_MAX_TOKENS` |
+| Claude max tokens | **8k parse / 20k predict** (spiritual **24k**) | Room for thinking + full sections; override `CLAUDE_*_MAX_TOKENS` |
 
 For contributor / coding-agent guidance you can edit, see [`PROJECT_INSTRUCTIONS.md`](PROJECT_INSTRUCTIONS.md).
 

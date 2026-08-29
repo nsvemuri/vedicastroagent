@@ -16,7 +16,7 @@ from .chart_loader import (
     load_chart_file,
     subject_age_as_of,
 )
-from .llm import LLMClient, create_llm_client
+from .llm import LLMClient, create_llm_client, prediction_max_output_tokens
 from .prompts import (
     PARSE_SYSTEM_INSTRUCTION,
     PREDICTION_SYSTEM_INSTRUCTION,
@@ -213,6 +213,9 @@ class VedicAstroAgent:
         prediction = self.client.generate_prediction(
             system=PREDICTION_SYSTEM_INSTRUCTION,
             user=prediction_prompt,
+            max_output_tokens=prediction_max_output_tokens(
+                topic.key, self.client.config.max_output_tokens
+            ),
         )
 
         response = (

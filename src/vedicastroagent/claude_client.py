@@ -10,6 +10,7 @@ from anthropic import Anthropic
 from .llm import (
     CLAUDE_MODEL_ALIASES,
     DEFAULT_CLAUDE_MODEL,
+    DEFAULT_PREDICTION_MAX_OUTPUT_TOKENS,
     LLMClientConfig,
     PARSE_TEMPERATURE,
     PREDICTION_TEMPERATURE,
@@ -19,9 +20,9 @@ from .llm import (
 
 
 # Adaptive thinking counts against max_tokens. Keep enough room for text, but
-# avoid 16k/32k defaults — those inflate thinking spend. Env can raise them.
+# avoid 32k defaults — those inflate thinking spend. Env can raise them.
 DEFAULT_CLAUDE_PARSE_MAX_TOKENS = 8192
-DEFAULT_CLAUDE_PREDICTION_MAX_TOKENS = 16384
+DEFAULT_CLAUDE_PREDICTION_MAX_TOKENS = DEFAULT_PREDICTION_MAX_OUTPUT_TOKENS
 
 
 def _env_int(name: str, default: int) -> int:
@@ -158,12 +159,14 @@ class ClaudeClient:
             effort=self._claude.parse_effort,
         )
 
-    def generate_prediction(self, *, system: str, user: str) -> str:
+    def generate_prediction(
+        self, *, system: str, user: str, max_output_tokens: int | None = None
+    ) -> str:
         return self.generate(
             system=system,
             user=user,
             temperature=self.config.prediction_temperature,
-            max_output_tokens=self.config.max_output_tokens,
+            max_output_tokens=max_output_tokens or self.config.max_output_tokens,
             effort=self._claude.prediction_effort,
         )
 

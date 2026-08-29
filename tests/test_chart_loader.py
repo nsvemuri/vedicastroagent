@@ -10,9 +10,11 @@ from vedicastroagent.chart_loader import (
 from vedicastroagent.llm import (
     CLAUDE_MODEL_ALIASES,
     DEFAULT_MODEL,
+    DENSE_TOPIC_PREDICTION_MAX_OUTPUT_TOKENS,
     PARSE_TEMPERATURE,
     PREDICTION_TEMPERATURE,
     create_llm_client,
+    prediction_max_output_tokens,
     resolve_claude_model,
     resolve_provider,
 )
@@ -68,12 +70,18 @@ def test_claude_token_budgets_leave_room_for_thinking():
     )
 
     assert DEFAULT_CLAUDE_PARSE_MAX_TOKENS >= 8192
-    assert DEFAULT_CLAUDE_PREDICTION_MAX_TOKENS >= 16384
+    assert DEFAULT_CLAUDE_PREDICTION_MAX_TOKENS >= 20480
     cfg = ClaudeConfig()
     assert cfg.parse_max_output_tokens >= 8192
-    assert cfg.max_output_tokens >= 16384
+    assert cfg.max_output_tokens >= 20480
     assert cfg.parse_effort == "low"
     assert cfg.prediction_effort == "medium"
+
+
+def test_spiritual_prediction_gets_extra_output_budget():
+    assert prediction_max_output_tokens("career", 20480) == 20480
+    assert prediction_max_output_tokens("spiritual", 20480) == DENSE_TOPIC_PREDICTION_MAX_OUTPUT_TOKENS
+    assert prediction_max_output_tokens("spiritual", 32768) == 32768
 
 
 def test_claude_client_uses_streaming_for_long_requests(monkeypatch):
@@ -253,6 +261,8 @@ def test_all_topics_require_topic_specific_yoga_scan():
     pred = build_prediction_prompt(wealth, "parse facts")
     assert "Topic-specific yogas from the focus above" in pred
     assert "topic-specific yogas" in pred
+    assert "After the yoga list, continue through sections 4–8" in pred
+    assert "one short line" in PREDICTION_SYSTEM_INSTRUCTION
 
 
 def test_prediction_tone_is_fact_first():
@@ -286,7 +296,7 @@ def test_prediction_prompt_includes_subject_age():
     from vedicastroagent import __version__
     from vedicastroagent.prompts import PREDICTION_SYSTEM_INSTRUCTION, build_prediction_prompt
 
-    assert __version__.startswith("0.2.")
+    assert __version__.startswith("0.3.")
     assert "current age" in PREDICTION_SYSTEM_INSTRUCTION
     topic = next(t for t in TOPICS if t.key == "marriage")
     pred_p = build_prediction_prompt(

@@ -242,11 +242,13 @@ PREDICTION_SYSTEM_INSTRUCTION = SYSTEM_INSTRUCTION + f"""
 - Treat those parse facts as ground truth; build interpretation on them only.
 - Do NOT repeat the full parsing checklist — reference the supplied parse summary instead.
 - Complete sections 2–8 of the required response structure (analysis through remedies).
+  Finish 4–8 after the yoga scan; do not spend the whole answer on section 3.
 - Actively apply classical house categories, Yogakaraka, yogas, dignities, aspects, functional nature,
   **nakshatra/pada/nakshatra-lord/deity**, gandanta when indicated, and varga deities only when highly relevant
   (see framework below). Prefer a few well-supported vitals over a long checklist of guesses.
 - **Topic-specific yogas are mandatory:** each topic focus lists yogas/doshas to scan for that life area.
   In section 3, name which of those are present, partial/broken, or absent (with brief placement evidence).
+  Keep each yoga verdict to one short line (name + status + one evidence clause).
   Do not skip the topic yoga scan; do not dump unrelated yogas from other life areas.
 - Factual priority: section 3 must reflect the true net pattern (including hard patterns when dominant);
   section 5 must be concrete, not a soft afterthought; do not end every reading with forced optimism.
@@ -717,7 +719,8 @@ Classical vitals to weigh when supported by the parse/chart facts:
 Required response structure (sections 2–8 only; parse facts are already verified above):
 2. Key chart factors used (Yogakaraka / house-class / dignity / nakshatra-pada notes when relevant)
 3. Core promise / pattern — net assessment first (strong / mixed / challenged), then **topic-specific yogas**
-   (present / partial-broken / absent with brief evidence) and other combinations that define the topic
+   (one short line each: present / partial-broken / absent + brief evidence) and other combinations
+   that define the topic. After the yoga list, continue through sections 4–8.
 4. Strengths and supports — only factors actually present; no padding
 5. Challenges / cautions — explicit and specific when indicated (do not minimize); say "none material" only if truly so
 6. Timing notes — quote MD/AD (and Sudasa/Narayana if used) from the natal dasa payload; use transit/gochara
