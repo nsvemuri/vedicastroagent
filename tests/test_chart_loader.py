@@ -492,10 +492,36 @@ def test_longevity_is_opt_in_and_uses_full_jhora_profile():
     assert len(payload) > len(format_prediction_chart_payload(chart, "career", as_of=date(2026, 8, 10)))
 
     lon = next(t for t in ALL_TOPICS if t.key == "longevity")
-    assert "year–month" in lon.focus or "YYYY-MM" in lon.focus
+    assert "PRATYANTARDASA" in lon.focus or "peak month" in lon.focus
     assert "calendar **day** of death" in lon.focus or "calendar day of death" in lon.focus
     assert "Marana Karaka Sthana" in lon.focus
     pred = build_prediction_prompt(lon, "parse facts", chart_load_payload=payload)
-    assert "year–month" in PREDICTION_SYSTEM_INSTRUCTION
-    assert "YYYY-MM to YYYY-MM" in pred
+    assert "peak month" in PREDICTION_SYSTEM_INSTRUCTION
+    assert "PRATYANTARDASA" in pred
+    assert "peak YYYY-MM" in pred
     assert "ENTIRE NATAL JHORA EXPORT" in pred
+    assert "COMPUTED VIMSHOTTARI PRATYANTARDASA" in payload
+    assert "peak 20" in payload
+
+
+def test_vimsottari_pratyantardasa_pins_peak_month():
+    from datetime import date
+
+    from vedicastroagent.chart_loader import (
+        split_vimsottari_pratyantardasa,
+        vimsottari_current_and_next,
+    )
+
+    pds = split_vimsottari_pratyantardasa("Ven", date(2025, 12, 24), date(2027, 2, 22))
+    assert len(pds) == 9
+    assert pds[0][0] == "Venus"
+    assert pds[0][1] == date(2025, 12, 24)
+    assert pds[-1][2] == date(2027, 2, 22)
+    assert pds[1][0] == "Sun"
+
+    chart = load_chart_file(FIXTURE)
+    labeled = vimsottari_current_and_next(chart, date(2026, 8, 10))
+    assert "COMPUTED VIMSHOTTARI PRATYANTARDASA" in labeled
+    assert "CURRENT PD" in labeled
+    assert "NEXT PD" in labeled
+    assert "peak 202" in labeled

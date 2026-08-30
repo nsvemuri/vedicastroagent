@@ -263,8 +263,9 @@ PREDICTION_SYSTEM_INSTRUCTION = SYSTEM_INSTRUCTION + f"""
 - Treat inventory lines marked FOUND as present. Never claim D-2, D-4, D-9, D-10, natal dasas, or transit
   data were "not provided" / "insufficient" when the inventory marks them FOUND or the blocks appear below.
 - Timing (section 6) must use the natal dasa tables and transit/gochara core from the payload when FOUND.
-- Longevity readings: classify span and time sensitive windows at **year–month** granularity
-  (YYYY-MM from natal Vimshottari AD / Shoola / gochara). Never state a calendar **day** of death as a fact.
+- Longevity readings: classify span and pin each event to a **single peak month** (YYYY-MM)
+  from computed Vimshottari pratyantardasa (PD start). AD is only the envelope.
+  Never state a calendar **day** of death as a fact.
 
 {CLASSICAL_VEDIC_FRAMEWORK}
 """
@@ -582,12 +583,14 @@ OPTIONAL_TOPICS: list[TopicSpec] = [
             "- [ ] Quote D-6 / D-8 / D-30 / D-9 / D-60 / Rudramsa (D-11) center labels if those blocks exist\n"
             "- [ ] Associations of 8th/3rd/2nd/7th lords (conj/aspect/exchange) and any MKS placements\n"
             "- [ ] Current natal Vimshottari MD + AD with start dates (quote YYYY-MM-DD lines)\n"
-            "- [ ] Next AD and next MD start dates if labeled; Shoola Dasa / Moola Dasa date lines if present"
+            "- [ ] Next AD and next MD start dates if labeled; current + next pratyantardasa peak YYYY-MM if present\n"
+            "- [ ] Shoola Dasa / Moola Dasa date lines if present"
         ),
         focus=(
             "Analyze vitality, recovery capacity, and longevity class with dated risk windows.\n"
             "HARD RULES: never name a calendar **day** of death and never claim certainty. "
-            "DO give year–month windows (YYYY-MM … YYYY-MM) for every sensitive period you cite. "
+            "DO pin each sensitive event to one peak month YYYY-MM from the PRATYANTARDASA table "
+            "(PD start month). The AD range is background only — do not leave a multi-year AD as the answer. "
             "Give an ayur class (alpayu / madhyayu / dirghayu, or mixed) with confidence and conflicting evidence. "
             "Use the ENTIRE raw Jagannatha Hora natal dump in the payload (not a filtered excerpt). "
             "Secondary snapshot is gochara only — never take dasas from it.\n"
@@ -616,16 +619,14 @@ OPTIONAL_TOPICS: list[TopicSpec] = [
             "- Shoola dasa (if the table exists): 9-year signs; judge the running sign vs AL and its trines "
             "and 3rd-from-AL; malefic rasi/graha drishti on that spoke is a serious window. "
             "Vimshottari remains the default timer; special dasas (e.g. Dwisaptati) only if the export shows them.\n"
-            "- TIMING GRANULARITY (mandatory in section 6): label each window as YYYY-MM to YYYY-MM. "
-            "Primary clock = natal Vimshottari AD start dates already in the payload (current AD, next AD, next MD). "
-            "A sensitive window is an AD (or overlapping ADs) whose lord is a maraka, 8th/3rd lord, MKS planet, "
-            "A8 occupant, or AK/AL-trine Shoola sign — quote the AD date line, then state the month range. "
-            "If only a year is printed, use YYYY-01 to YYYY-12. If Shoola gives a 9-year sign, name the year span "
-            "and the overlapping Vimshottari ADs inside it (month-level). "
-            "Gochara (Saturn/Jupiter/nodes on 1/8/Moon/maraka) may tighten a window to a month when the "
-            "snapshot + as-of date support it; otherwise keep the AD month-range. "
-            "List the nearest 1–3 upcoming windows from the analysis date, plus any current window. "
-            "Say 'insufficient' only if those dasa dates are marked NOT FOUND.\n"
+            "- TIMING GRANULARITY (mandatory in section 6): one peak month per event, as YYYY-MM. "
+            "Primary clock = COMPUTED VIMSHOTTARI PRATYANTARDASA in the payload (PD start = peak month). "
+            "Pick the PD whose lord is a maraka, 8th/3rd lord, MKS planet, A8 occupant, or nodes — "
+            "quote `peak YYYY-MM` and the PD line. AD/MD dates are the envelope only. "
+            "List current PD peak plus the next 1–3 peak months (not AD ranges). "
+            "Gochara (Mars ~1–2 months; Jupiter/Saturn ingress) may confirm the same YYYY-MM; "
+            "do not replace PD with a multi-year AD. "
+            "Say 'insufficient' only if pratyantardasa and AD dates are both marked NOT FOUND.\n"
             "- Gochara: Saturn on natal 8th/Lagna/Moon (ashtama / Sade Sati / kantaka) is stress, not a death sentence. "
             "Require natal maraka/ayur promise before calling a transit dangerous. Age must bound the reading "
             "(do not imply balarishta for a middle-aged native; do not ignore current age vs claimed span).\n"
@@ -768,9 +769,9 @@ def build_prediction_prompt(
     longevity_timing = ""
     if topic.key == "longevity":
         longevity_timing = (
-            "   Longevity timing (mandatory): label every sensitive window YYYY-MM to YYYY-MM "
-            "using quoted natal Vimshottari AD (and Shoola/gochara) dates. List the current window "
-            "plus the next 1–3. Do not name a calendar day of death.\n"
+            "   Longevity timing (mandatory): name one peak month YYYY-MM per event from "
+            "COMPUTED VIMSHOTTARI PRATYANTARDASA (PD start). List current + next 1–3 peaks. "
+            "Do not answer with a multi-year AD range. Do not name a calendar day of death.\n"
         )
     return f"""Interpret the following Vedic chart reading for {who}.
 

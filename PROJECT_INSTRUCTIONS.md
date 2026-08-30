@@ -95,7 +95,7 @@ Incorrect D-2/D-4/dasa readings can come from **context extraction bugs** or fro
 
 Default full report: `career`, `wealth`, `marriage`, `children`, `education`, `spiritual`, `transits`
 
-Opt-in only (never in the default report): `longevity` (`-t longevity` / `ayur` / `ayush`). Longevity sends the **entire raw JH natal dump** plus computed cores (not a topic-filtered excerpt). Timing must be **year–month** windows from natal Vimshottari AD / Shoola / gochara dates — not a calendar day of death. Prompts distill Parashara/Jaimini + SJC-Boston PVR lesson techniques from local `books/` PDFs — do not paste book text into the repo or prompts.
+Opt-in only (never in the default report): `longevity` (`-t longevity` / `ayur` / `ayush`). Longevity sends the **entire raw JH natal dump** plus computed cores (not a topic-filtered excerpt). Timing must pin a **peak YYYY-MM** from computed Vimshottari pratyantardasa (PD start); AD is only the envelope — not a calendar day of death. Prompts distill Parashara/Jaimini + SJC-Boston PVR lesson techniques from local `books/` PDFs — do not paste book text into the repo or prompts.
 
 ## How to request code changes
 

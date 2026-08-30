@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Iterable
 
@@ -452,7 +452,7 @@ def current_vimsottari_summary(
 
 
 def vimsottari_current_and_next(chart: ChartDocument, as_of: date) -> str:
-    """Label current MD/AD and the next AD / next MD from natal Vimshottari."""
+    """Label current MD/AD, next AD/MD, and computed pratyantardasa months."""
     section = extract_dasa_section(chart.natal_text, "Vimsottari Dasa") or ""
     if not section:
         return ""
@@ -476,6 +476,10 @@ def vimsottari_current_and_next(chart: ChartDocument, as_of: date) -> str:
         elif next_ad is None:
             next_ad = (name, start)
             break
+
+    next_md_start = None
+    if current_idx + 1 < len(blocks):
+        next_md_start = blocks[current_idx + 1].get("start")
 
     parts = [
         f"=== CURRENT VIMSHOTTARI (as of {as_of.isoformat()}) ===",
@@ -504,7 +508,161 @@ def vimsottari_current_and_next(chart: ChartDocument, as_of: date) -> str:
                 *nxt["lines"][:12],
             ]
         )
+    pd_block = _format_pratyantardasa_windows(
+        ads,
+        current_ad=current_ad,
+        next_ad=next_ad,
+        next_md_start=next_md_start,
+        as_of=as_of,
+        md_name=current["md"],
+    )
+    if pd_block:
+        parts.append(pd_block)
     return "\n".join(parts)
+
+
+_VIMS_YEARS = {
+    "sun": 6,
+    "moon": 10,
+    "mars": 7,
+    "rahu": 18,
+    "jupiter": 16,
+    "saturn": 19,
+    "mercury": 17,
+    "ketu": 7,
+    "venus": 20,
+}
+_VIMS_ORDER = (
+    "ketu",
+    "venus",
+    "sun",
+    "moon",
+    "mars",
+    "rahu",
+    "jupiter",
+    "saturn",
+    "mercury",
+)
+_VIMS_ALIASES = {
+    "su": "sun",
+    "sun": "sun",
+    "mo": "moon",
+    "moon": "moon",
+    "ma": "mars",
+    "mar": "mars",
+    "mars": "mars",
+    "ra": "rahu",
+    "rah": "rahu",
+    "rahu": "rahu",
+    "ju": "jupiter",
+    "jup": "jupiter",
+    "jupiter": "jupiter",
+    "sa": "saturn",
+    "sat": "saturn",
+    "saturn": "saturn",
+    "me": "mercury",
+    "mer": "mercury",
+    "merc": "mercury",
+    "mercury": "mercury",
+    "ke": "ketu",
+    "ket": "ketu",
+    "ketu": "ketu",
+    "ve": "venus",
+    "ven": "venus",
+    "venus": "venus",
+}
+
+
+def _normalize_vims_planet(name: str) -> str | None:
+    key = re.sub(r"[^a-z]", "", name.strip().lower())
+    return _VIMS_ALIASES.get(key)
+
+
+def _ad_end_date(
+    ads: list[tuple[str, date]],
+    ad_start: date,
+    next_md_start: date | None,
+) -> date | None:
+    later = sorted(start for _, start in ads if start > ad_start)
+    if later:
+        return later[0]
+    return next_md_start
+
+
+def split_vimsottari_pratyantardasa(
+    ad_lord: str, start: date, end: date
+) -> list[tuple[str, date, date]]:
+    """Subdivide an AD into 9 PDs in Vimshottari order starting from the AD lord."""
+    lord = _normalize_vims_planet(ad_lord)
+    if lord is None or end <= start:
+        return []
+    idx = _VIMS_ORDER.index(lord)
+    total_days = (end - start).days
+    if total_days <= 0:
+        return []
+    cursor = 0.0
+    out: list[tuple[str, date, date]] = []
+    for i in range(9):
+        planet = _VIMS_ORDER[(idx + i) % 9]
+        cursor += _VIMS_YEARS[planet] / 120.0
+        pd_start = start + timedelta(days=round(total_days * (cursor - _VIMS_YEARS[planet] / 120.0)))
+        pd_end = end if i == 8 else start + timedelta(days=round(total_days * cursor))
+        if pd_end < pd_start:
+            pd_end = pd_start
+        out.append((planet.title(), pd_start, pd_end))
+    if out:
+        first = out[0]
+        last = out[-1]
+        out[0] = (first[0], start, first[2])
+        out[-1] = (last[0], last[1], end)
+    return out
+
+
+def _format_pratyantardasa_windows(
+    ads: list[tuple[str, date]],
+    *,
+    current_ad: tuple[str, date] | None,
+    next_ad: tuple[str, date] | None,
+    next_md_start: date | None,
+    as_of: date,
+    md_name: str,
+) -> str:
+    """Current + upcoming PD rows with a peak YYYY-MM (PD start month)."""
+    if not current_ad:
+        return ""
+    rows: list[str] = [
+        "=== COMPUTED VIMSHOTTARI PRATYANTARDASA (AD x planet-years/120; peak month = PD start) ===",
+        "Use the peak YYYY-MM as the month pin; the AD is only the envelope.",
+    ]
+    targets = [current_ad]
+    if next_ad:
+        targets.append(next_ad)
+    saw_current = False
+    saw_next = False
+    for ad_name, ad_start in targets:
+        ad_end = _ad_end_date(ads, ad_start, next_md_start)
+        if ad_end is None:
+            continue
+        pds = split_vimsottari_pratyantardasa(ad_name, ad_start, ad_end)
+        if not pds:
+            continue
+        rows.append(
+            f"{md_name}-{ad_name} AD {ad_start.isoformat()} to {ad_end.isoformat()}:"
+        )
+        for planet, pd_start, pd_end in pds:
+            peak = pd_start.strftime("%Y-%m")
+            mark = ""
+            if pd_start <= as_of < pd_end:
+                mark = "  <- CURRENT PD"
+                saw_current = True
+            elif pd_start > as_of and not saw_next:
+                mark = "  <- NEXT PD"
+                saw_next = True
+            rows.append(
+                f"  {ad_name}-{planet} PD {pd_start.isoformat()} to {pd_end.isoformat()}  "
+                f"peak {peak}{mark}"
+            )
+    return "\n".join(rows) if (saw_current or saw_next or len(rows) > 2) else ""
 
 
 def _parse_vimsottari_blocks(section: str) -> list[dict]:
@@ -985,6 +1143,8 @@ def format_full_jhora_profile(
     vim = current_vimsottari_summary(chart, as_of=as_of)
     if vim.strip():
         inventory.append(f"Vimshottari current + next windows as of {as_of.year}: FOUND")
+        if "PRATYANTARDASA" in vim:
+            inventory.append("Vimshottari pratyantardasa peak months: FOUND (computed from AD dates)")
     if chart.secondary_text:
         inventory.append(
             f"TRANSIT / GOCHARA CORE: FOUND "
