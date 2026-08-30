@@ -259,12 +259,14 @@ PREDICTION_SYSTEM_INSTRUCTION = SYSTEM_INSTRUCTION + f"""
   Do not give age-inappropriate advice (e.g. imminent childbearing or school exams) without acknowledging age.
 - An authoritative **chart-load payload** is supplied with every prediction prompt. It includes:
   PAYLOAD INVENTORY, NATAL RASI CORE, topic divisional ASCII charts (e.g. D-2/D-4 for wealth, D-10 for career),
-  NATAL DASA TABLES / Vimshottari windows, and TRANSIT/GOCHARA CORE when a secondary snapshot exists.
+  NATAL DASA TABLES / Vimshottari windows, TRANSIT/GOCHARA CORE when a secondary snapshot exists,
+  and for longevity a computed **45-YEAR GOCHARA INGRESSES** table (Saturn/Jupiter/Rahu/Ketu/Mars).
 - Treat inventory lines marked FOUND as present. Never claim D-2, D-4, D-9, D-10, natal dasas, or transit
   data were "not provided" / "insufficient" when the inventory marks them FOUND or the blocks appear below.
 - Timing (section 6) must use the natal dasa tables and transit/gochara core from the payload when FOUND.
 - Longevity readings: classify span and pin each event to a **single peak month** (YYYY-MM)
-  from computed Vimshottari pratyantardasa (PD start). AD is only the envelope.
+  from computed Vimshottari pratyantardasa (PD start), confirmed by the 45-year gochara ingress table
+  when an ingress flags natal 1/8/Moon/maraka in that same month. AD is only the envelope.
   Never state a calendar **day** of death as a fact.
 
 {CLASSICAL_VEDIC_FRAMEWORK}
@@ -584,7 +586,8 @@ OPTIONAL_TOPICS: list[TopicSpec] = [
             "- [ ] Associations of 8th/3rd/2nd/7th lords (conj/aspect/exchange) and any MKS placements\n"
             "- [ ] Current natal Vimshottari MD + AD with start dates (quote YYYY-MM-DD lines)\n"
             "- [ ] Next AD and next MD start dates if labeled; current + next pratyantardasa peak YYYY-MM if present\n"
-            "- [ ] Shoola Dasa / Moola Dasa date lines if present"
+            "- [ ] Shoola Dasa / Moola Dasa date lines if present\n"
+            "- [ ] Quote 45-YEAR GOCHARA INGRESSES header + any flagged Saturn/Jupiter/Rahu/Mars rows near current age"
         ),
         focus=(
             "Analyze vitality, recovery capacity, and longevity class with dated risk windows.\n"
@@ -624,12 +627,14 @@ OPTIONAL_TOPICS: list[TopicSpec] = [
             "Pick the PD whose lord is a maraka, 8th/3rd lord, MKS planet, A8 occupant, or nodes — "
             "quote `peak YYYY-MM` and the PD line. AD/MD dates are the envelope only. "
             "List current PD peak plus the next 1–3 peak months (not AD ranges). "
-            "Gochara (Mars ~1–2 months; Jupiter/Saturn ingress) may confirm the same YYYY-MM; "
-            "do not replace PD with a multi-year AD. "
-            "Say 'insufficient' only if pratyantardasa and AD dates are both marked NOT FOUND.\n"
-            "- Gochara: Saturn on natal 8th/Lagna/Moon (ashtama / Sade Sati / kantaka) is stress, not a death sentence. "
-            "Require natal maraka/ayur promise before calling a transit dangerous. Age must bound the reading "
-            "(do not imply balarishta for a middle-aged native; do not ignore current age vs claimed span).\n"
+            "Confirm the peak month from **45-YEAR GOCHARA INGRESSES** when Saturn/Jupiter/Rahu/Ketu/Mars "
+            "enters natal 1/8/Moon/maraka that same YYYY-MM (or the nearest flagged ingress). "
+            "Do not invent transit dates; do not replace PD with a multi-year AD. "
+            "Say 'insufficient' only if pratyantardasa and the gochara table are both marked NOT FOUND.\n"
+            "- Gochara (use the 45-year ingress table, not memory): Saturn on natal 8th/Lagna/Moon "
+            "(ashtama / Sade Sati) is stress, not a death sentence. Flagged rows are the only allowed "
+            "transit evidence. Require natal maraka/ayur promise before calling a transit dangerous. "
+            "Age must bound the reading (do not imply balarishta for a middle-aged native).\n"
             "- Body mapping only when supported: sign-from-Aries limbs; planet tissues (Sun bone, Moon blood, "
             "Mars marrow/nerve, Mercury skin, Jupiter fat, Venus fluids/repro, Saturn muscle/vayu).\n"
             "Topic-specific yogas (mandatory scan — state present / partial-broken / absent with evidence):\n"
@@ -770,7 +775,9 @@ def build_prediction_prompt(
     if topic.key == "longevity":
         longevity_timing = (
             "   Longevity timing (mandatory): name one peak month YYYY-MM per event from "
-            "COMPUTED VIMSHOTTARI PRATYANTARDASA (PD start). List current + next 1–3 peaks. "
+            "COMPUTED VIMSHOTTARI PRATYANTARDASA (PD start). Confirm with 45-YEAR GOCHARA "
+            "INGRESSES when a flagged Saturn/Jupiter/node/Mars row falls in that month. "
+            "List current + next 1–3 peaks. Do not invent transit dates. "
             "Do not answer with a multi-year AD range. Do not name a calendar day of death.\n"
         )
     return f"""Interpret the following Vedic chart reading for {who}.

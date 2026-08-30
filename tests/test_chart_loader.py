@@ -1,3 +1,4 @@
+import re
 from pathlib import Path
 
 from vedicastroagent.chart_loader import (
@@ -502,6 +503,10 @@ def test_longevity_is_opt_in_and_uses_full_jhora_profile():
     assert "ENTIRE NATAL JHORA EXPORT" in pred
     assert "COMPUTED VIMSHOTTARI PRATYANTARDASA" in payload
     assert "peak 20" in payload
+    assert "45-YEAR GOCHARA INGRESSES: FOUND" in payload
+    assert "45-YEAR GOCHARA INGRESSES" in pred
+    career_payload = format_prediction_chart_payload(chart, "career", as_of=date(2026, 8, 10))
+    assert "45-YEAR GOCHARA INGRESSES" not in career_payload
 
 
 def test_vimsottari_pratyantardasa_pins_peak_month():
@@ -525,3 +530,27 @@ def test_vimsottari_pratyantardasa_pins_peak_month():
     assert "CURRENT PD" in labeled
     assert "NEXT PD" in labeled
     assert "peak 202" in labeled
+
+
+def test_gochara_parses_jh_ayanamsa_and_saturn_pisces_ingress():
+    from datetime import date
+
+    from vedicastroagent.gochara import (
+        format_longevity_gochara_table,
+        parse_ayanamsa_degrees,
+    )
+
+    # Sample JH line: 23-34-44.37
+    assert abs(parse_ayanamsa_degrees("23-34-44.37") - (23 + 34 / 60 + 44.37 / 3600)) < 1e-9
+    assert parse_ayanamsa_degrees("Lahiri") is None
+
+    chart = load_chart_file(FIXTURE)
+    table = format_longevity_gochara_table(chart, as_of=date(2025, 1, 1), years=1)
+    assert "45-YEAR GOCHARA INGRESSES" in table
+    assert "NOT FOUND" not in table.splitlines()[0]
+    # Sidereal Saturn entered Pisces near 2025-03-29/30 (Lahiri / JH ayanamsa).
+    assert re.search(r"2025-03-2[89].*Saturn\s+Pi", table) or re.search(
+        r"2025-03-30.*Saturn\s+Pi", table
+    )
+    assert "H12" in table
+    assert "from natal Lagna Ar" in table

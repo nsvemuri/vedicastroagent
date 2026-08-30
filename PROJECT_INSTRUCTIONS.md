@@ -74,6 +74,7 @@ Incorrect D-2/D-4/dasa readings can come from **context extraction bugs** or fro
 | `src/vedicastroagent/gemini_client.py` | Gemini API wrapper |
 | `src/vedicastroagent/claude_client.py` | Claude API wrapper |
 | `src/vedicastroagent/chart_loader.py` | RTF/text parse, varga/dasa extraction |
+| `src/vedicastroagent/gochara.py` | 45-year sidereal ingress calendar (longevity only) |
 | `src/vedicastroagent/prompts.py` | System + per-topic parse checklists / focus |
 | `tests/` | Parser/context/prompt/provider tests |
 | `README.md` | User-facing usage |
@@ -95,7 +96,7 @@ Incorrect D-2/D-4/dasa readings can come from **context extraction bugs** or fro
 
 Default full report: `career`, `wealth`, `marriage`, `children`, `education`, `spiritual`, `transits`
 
-Opt-in only (never in the default report): `longevity` (`-t longevity` / `ayur` / `ayush`). Longevity sends the **entire raw JH natal dump** plus computed cores (not a topic-filtered excerpt). Timing must pin a **peak YYYY-MM** from computed Vimshottari pratyantardasa (PD start); AD is only the envelope — not a calendar day of death. Prompts distill Parashara/Jaimini + SJC-Boston PVR lesson techniques from local `books/` PDFs — do not paste book text into the repo or prompts.
+Opt-in only (never in the default report): `longevity` (`-t longevity` / `ayur` / `ayush`). Longevity sends the **entire raw JH natal dump** plus computed cores (not a topic-filtered excerpt). Timing must pin a **peak YYYY-MM** from computed Vimshottari pratyantardasa (PD start), confirmed by the computed **45-year gochara ingress** table when present; AD is only the envelope — not a calendar day of death. Prompts distill Parashara/Jaimini + SJC-Boston PVR lesson techniques from local `books/` PDFs — do not paste book text into the repo or prompts.
 
 ## How to request code changes
 
@@ -117,6 +118,7 @@ Add items under **Requested changes** below. Be concrete: file/area, desired beh
 - Add/adjust tests in `tests/` when changing chart parsing, providers, or default model ids.
 - Do not commit secrets (`.env`).
 - Do not invent ephemeris precision the export does not contain.
+- Longevity may attach a **computed** 45-year sidereal gochara ingress table (`gochara.py` / Swiss Ephemeris). Use only those computed dates; still do not invent longitudes.
 - When tightening astrology accuracy, prefer prompt/checklist + extraction fixes; keep parse temperature at **0**.
 
 ## Verification checklist

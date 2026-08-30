@@ -179,7 +179,7 @@ _TOPIC_CORE_HOUSES: dict[str, list[int]] = {
 
 # Longevity (and any later opt-in medical/ayur topics) get the entire JH dump.
 FULL_RAW_PROFILE_TOPICS = frozenset({"longevity"})
-FULL_JH_PROFILE_MAX_CHARS = 120000
+FULL_JH_PROFILE_MAX_CHARS = 160000
 _LONGEVITY_INVENTORY_VARGAS = (
     "D-6",
     "D-8",
@@ -1154,6 +1154,16 @@ def format_full_jhora_profile(
     else:
         inventory.append("TRANSIT / GOCHARA CORE: NOT FOUND (no secondary snapshot)")
 
+    from .gochara import format_longevity_gochara_table
+
+    gochara_table = format_longevity_gochara_table(chart, as_of=as_of)
+    gochara_ok = "45-YEAR GOCHARA INGRESSES" in gochara_table and "NOT FOUND" not in gochara_table[:400]
+    inventory.append(
+        "45-YEAR GOCHARA INGRESSES: FOUND (computed sidereal Saturn/Jupiter/Rahu/Ketu/Mars)"
+        if gochara_ok
+        else "45-YEAR GOCHARA INGRESSES: NOT FOUND"
+    )
+
     header = (
         "=== PAYLOAD INVENTORY (FOUND means present below — do not claim missing) ===\n"
         + "\n".join(f"- {line}" for line in inventory)
@@ -1180,6 +1190,8 @@ def format_full_jhora_profile(
             + "\n"
             + chart.secondary_text.strip()
         )
+    if gochara_table.strip():
+        parts.append(gochara_table.strip())
     joined = "\n\n".join(parts).strip()
     if len(joined) > max_chars:
         return joined[:max_chars] + "\n\n[...full JH profile truncated for prompt size...]"

@@ -74,7 +74,7 @@ vedicastroagent ~/Desktop/Srinu.txt --provider claude --model mythos
 # Selected topics
 vedicastroagent ~/Desktop/Srinu.txt -t career wealth marriage transits
 
-# Longevity is opt-in (uses the entire raw JH natal dump)
+# Longevity is opt-in (full JH dump + computed 45-year gochara ingresses)
 vedicastroagent ~/Desktop/Srinu.txt -t longevity --name Srinu --provider claude --model mythos
 
 # Custom output path + transit reference date
@@ -114,3 +114,4 @@ Pushkara Navamsha is deduced by the model from navamsa placements when JH does n
 - Gemini-only and Claude-only setups are both supported; you do not need both API keys.
 - This is interpretive decision support grounded in the supplied chart export, not a substitute for a human Jyotishi.
 - Transit detail is strongest when your export includes a recent secondary chart and current dasa tables; the agent also asks the model for a forward 12-month gochara/dasa synthesis from `--as-of`.
+- Longevity (`-t longevity`) also injects a computed **45-year sidereal ingress calendar** (Saturn, Jupiter, Rahu/Ketu, Mars) via Swiss Ephemeris (`pyswisseph`), using the JH ayanamsa when present (else Lahiri). Houses are counted from natal Lagna. Reinstall deps after pull: `pip install -e .`.
