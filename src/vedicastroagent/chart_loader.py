@@ -18,6 +18,7 @@ TOPIC_VARGAS: dict[str, list[str]] = {
     "education": ["Rasi", "D-24", "D-5"],
     "spiritual": ["Rasi", "D-9", "D-20", "D-60", "Navamsa"],
     "transits": ["Rasi"],
+    "longevity": ["Rasi", "D-6", "D-8", "D-9", "D-11", "D-30", "D-60", "Rudramsa"],
 }
 
 TOPIC_DASAS: dict[str, list[str]] = {
@@ -28,6 +29,7 @@ TOPIC_DASAS: dict[str, list[str]] = {
     "education": ["Vimsottari Dasa"],
     "spiritual": ["Vimsottari Dasa", "Moola Dasa"],
     "transits": ["Vimsottari Dasa", "Narayana Dasa", "Sudasa"],
+    "longevity": ["Vimsottari Dasa", "Shoola Dasa", "Moola Dasa"],
 }
 
 # English aliases skipped when the D-n block is already extracted.
@@ -47,6 +49,7 @@ _TOPIC_EXTRA_LONGITUDE = {
     "education": (),
     "spiritual": ("Bhrigu Bindu",),
     "transits": (),
+    "longevity": ("Maandi", "Mandi", "Gulika", "Mrityu"),
 }
 
 TOPIC_SECTION_HINTS: dict[str, list[str]] = {
@@ -97,6 +100,16 @@ TOPIC_SECTION_HINTS: dict[str, list[str]] = {
         "Chara karaka",
         "Shadbala",
     ],
+    "longevity": [
+        "Shadbala",
+        "Ashtakavarga",
+        "Chara karaka",
+        "Gulika",
+        "Maandi",
+        "Mandi",
+        "Mrityu",
+        "AK",
+    ],
 }
 
 _DASA_HEADERS = (
@@ -108,6 +121,8 @@ _DASA_HEADERS = (
     "Sudasa",
     "Yogini Dasa",
     "Chara Dasa",
+    "Shoola Dasa",
+    "Dwisaptati",
 )
 
 SIGN_ORDER = ("Ar", "Ta", "Ge", "Cn", "Le", "Vi", "Li", "Sc", "Sg", "Cp", "Aq", "Pi")
@@ -159,7 +174,22 @@ _TOPIC_CORE_HOUSES: dict[str, list[int]] = {
     "education": [1, 2, 4, 5, 9],
     "spiritual": [1, 5, 9, 12],
     "transits": [1, 4, 7, 10],
+    "longevity": [1, 2, 3, 6, 7, 8, 12],
 }
+
+# Longevity (and any later opt-in medical/ayur topics) get the entire JH dump.
+FULL_RAW_PROFILE_TOPICS = frozenset({"longevity"})
+FULL_JH_PROFILE_MAX_CHARS = 120000
+_LONGEVITY_INVENTORY_VARGAS = (
+    "D-6",
+    "D-8",
+    "D-9",
+    "D-11",
+    "D-30",
+    "D-60",
+    "Rudramsa",
+)
+_LONGEVITY_INVENTORY_DASAS = ("Vimsottari Dasa", "Shoola Dasa", "Moola Dasa")
 
 
 @dataclass
@@ -340,6 +370,10 @@ def extract_relevant_context(
 ) -> str:
     """Build a topic-only chart excerpt (Vargas/dasas for this life area only)."""
     as_of = as_of or date.today()
+    if topic in FULL_RAW_PROFILE_TOPICS:
+        return format_full_jhora_profile(
+            chart, as_of=as_of, max_chars=max(max_chars, FULL_JH_PROFILE_MAX_CHARS)
+        )
     natal_core = format_natal_rasi_core(chart, topic=topic)
     parts: list[str] = [
         "=== NATAL CHART METADATA ===",
@@ -838,6 +872,10 @@ def format_prediction_chart_payload(
     Prediction must not claim these blocks are missing when inventory marks them FOUND.
     """
     as_of = as_of or date.today()
+    if topic in FULL_RAW_PROFILE_TOPICS:
+        return format_full_jhora_profile(
+            chart, as_of=as_of, max_chars=max(max_chars, FULL_JH_PROFILE_MAX_CHARS)
+        )
     inventory: list[str] = []
     body_parts: list[str] = []
 
@@ -920,6 +958,71 @@ def format_prediction_chart_payload(
     joined = header + "\n\n" + "\n\n".join(body_parts)
     if len(joined) > max_chars:
         return joined[:max_chars] + "\n\n[...prediction payload truncated for size...]"
+    return joined
+
+
+def format_full_jhora_profile(
+    chart: ChartDocument,
+    *,
+    as_of: date | None = None,
+    max_chars: int = FULL_JH_PROFILE_MAX_CHARS,
+) -> str:
+    """Entire natal JH export plus computed cores — used by longevity."""
+    as_of = as_of or date.today()
+    inventory: list[str] = [
+        "FULL NATAL JH EXPORT: FOUND (entire raw profile is included below)",
+        "NATAL RASI CORE: FOUND",
+    ]
+    sphuta = _header_table(chart.natal_text)
+    if sphuta.strip():
+        inventory.append("NATAL SPHUTA / LONGITUDE TABLE: FOUND")
+    for label in _LONGEVITY_INVENTORY_VARGAS:
+        found = extract_varga_block(chart.natal_text, label) is not None
+        inventory.append(f"Varga {label}: {'FOUND' if found else 'NOT FOUND in export'}")
+    for title in _LONGEVITY_INVENTORY_DASAS:
+        found = extract_dasa_section(chart.natal_text, title) is not None
+        inventory.append(f"Natal dasa '{title}': {'FOUND' if found else 'NOT FOUND in export'}")
+    vim = current_vimsottari_summary(chart, as_of=as_of)
+    if vim.strip():
+        inventory.append(f"Vimshottari current + next windows as of {as_of.year}: FOUND")
+    if chart.secondary_text:
+        inventory.append(
+            f"TRANSIT / GOCHARA CORE: FOUND "
+            f"(snapshot {chart.secondary_metadata.get('date', 'unknown')})"
+        )
+        inventory.append("FULL SECONDARY / TRANSIT SNAPSHOT: FOUND (positions only; NOT natal dasas)")
+    else:
+        inventory.append("TRANSIT / GOCHARA CORE: NOT FOUND (no secondary snapshot)")
+
+    header = (
+        "=== PAYLOAD INVENTORY (FOUND means present below — do not claim missing) ===\n"
+        + "\n".join(f"- {line}" for line in inventory)
+        + f"\n- Analysis / as-of date: {as_of.isoformat()}\n"
+        + "- Scope: ENTIRE raw Jagannatha Hora natal dump (not a topic-filtered excerpt)."
+    )
+    parts = [
+        header,
+        format_natal_rasi_core(chart, topic="longevity"),
+        "=== NATAL LONGITUDE / KARAKA / SPHUTA TABLE (D-1 body list) ===\n" + sphuta,
+        "=== ENTIRE NATAL JHORA EXPORT (raw; authoritative for all claims) ===\n"
+        + chart.natal_text.strip(),
+    ]
+    if vim.strip():
+        parts.append(vim.strip())
+    transit_core = format_transit_rasi_core(chart)
+    if transit_core:
+        parts.append(transit_core)
+    if chart.secondary_text:
+        parts.append(
+            "=== ENTIRE SECONDARY / TRANSIT SNAPSHOT "
+            "(planetary positions only; NEVER use these dasas for natal timing) ===\n"
+            + _format_metadata(chart.secondary_metadata)
+            + "\n"
+            + chart.secondary_text.strip()
+        )
+    joined = "\n\n".join(parts).strip()
+    if len(joined) > max_chars:
+        return joined[:max_chars] + "\n\n[...full JH profile truncated for prompt size...]"
     return joined
 
 

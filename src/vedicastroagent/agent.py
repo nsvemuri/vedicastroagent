@@ -18,6 +18,7 @@ from .chart_loader import (
 )
 from .llm import LLMClient, create_llm_client, prediction_max_output_tokens
 from .prompts import (
+    ALL_TOPICS,
     PARSE_SYSTEM_INSTRUCTION,
     PREDICTION_SYSTEM_INSTRUCTION,
     TOPICS,
@@ -255,10 +256,14 @@ def _select_topics(topics: list[str] | None) -> list[TopicSpec]:
         "moksha": "spiritual",
         "transit": "transits",
         "gochara": "transits",
+        "ayur": "longevity",
+        "ayush": "longevity",
+        "lifespan": "longevity",
+        "life": "longevity",
     }
     normalized = {aliases.get(t, t) for t in wanted}
-    selected = [t for t in TOPICS if t.key in normalized]
+    selected = [t for t in ALL_TOPICS if t.key in normalized]
     if not selected:
-        known = ", ".join(t.key for t in TOPICS)
+        known = ", ".join(t.key for t in ALL_TOPICS)
         raise ValueError(f"No matching topics in {topics!r}. Known topics: {known}")
     return selected

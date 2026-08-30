@@ -222,6 +222,8 @@ Divisional (varga) deities — only when very relevant:
   - D-7 Saptamsa — procreative/creative deity theme with Jupiter/PK.
   - D-20 Vimsamsa — upasana/devata; sadhana style with AK/Ishta.
   - D-24 Siddhamsa — Saraswati/learning; education & siddhi of knowledge.
+  - D-6 Shashtamsa — disease-source / Ayurvedic root when health or longevity is the topic.
+  - D-8 / D-30 Trimsamsa — hidden crisis and weakness/tattva affliction when longevity is the topic.
   - D-60 Shashtyamsa — past-life/fine affliction deity only if D-60 data is actually present and used carefully.
 - Never let varga-deity commentary override hard placements, lords, yogas, or dasa dates.
 
@@ -261,6 +263,8 @@ PREDICTION_SYSTEM_INSTRUCTION = SYSTEM_INSTRUCTION + f"""
 - Treat inventory lines marked FOUND as present. Never claim D-2, D-4, D-9, D-10, natal dasas, or transit
   data were "not provided" / "insufficient" when the inventory marks them FOUND or the blocks appear below.
 - Timing (section 6) must use the natal dasa tables and transit/gochara core from the payload when FOUND.
+- Longevity readings: classify span and time sensitive windows at **year–month** granularity
+  (YYYY-MM from natal Vimshottari AD / Shoola / gochara). Never state a calendar **day** of death as a fact.
 
 {CLASSICAL_VEDIC_FRAMEWORK}
 """
@@ -561,6 +565,91 @@ TOPICS: list[TopicSpec] = [
 ]
 
 
+# Opt-in topics are never part of a default full-report run. Request with -t.
+# Longevity methods synthesized from Parashara/Jaimini plus SJC-Boston PVR lesson
+# notes (Lessons on Vedic Astrology Vol. I–II) — techniques only, no book text.
+OPTIONAL_TOPICS: list[TopicSpec] = [
+    TopicSpec(
+        key="longevity",
+        title="Longevity & Vitality (Ayur)",
+        parse_checklist=(
+            "- [ ] Natal Lagna sign + Lagna lord + lord house (from NATAL RASI CORE)\n"
+            "- [ ] Natal 8th sign + 8th lord + 8th lord house (ayur sthana)\n"
+            "- [ ] Natal 3rd sign + 3rd lord (vitality); 12th sign + 12th lord (loss of vitality)\n"
+            "- [ ] Natal 2nd and 7th signs + lords (maraka houses = 12th from 3rd and 8th)\n"
+            "- [ ] Saturn and Moon signs/houses; Sun house (physical vitality karaka)\n"
+            "- [ ] Mandi / Gulika / Mrityu Sphuta rows if present in the longitude table\n"
+            "- [ ] Quote D-6 / D-8 / D-30 / D-9 / D-60 / Rudramsa (D-11) center labels if those blocks exist\n"
+            "- [ ] Associations of 8th/3rd/2nd/7th lords (conj/aspect/exchange) and any MKS placements\n"
+            "- [ ] Current natal Vimshottari MD + AD with start dates (quote YYYY-MM-DD lines)\n"
+            "- [ ] Next AD and next MD start dates if labeled; Shoola Dasa / Moola Dasa date lines if present"
+        ),
+        focus=(
+            "Analyze vitality, recovery capacity, and longevity class with dated risk windows.\n"
+            "HARD RULES: never name a calendar **day** of death and never claim certainty. "
+            "DO give year–month windows (YYYY-MM … YYYY-MM) for every sensitive period you cite. "
+            "Give an ayur class (alpayu / madhyayu / dirghayu, or mixed) with confidence and conflicting evidence. "
+            "Use the ENTIRE raw Jagannatha Hora natal dump in the payload (not a filtered excerpt). "
+            "Secondary snapshot is gochara only — never take dasas from it.\n"
+            "Domain Depth (Parashara + Jaimini + SJC/PVR ayur method):\n"
+            "- 8th is ayur sthana; 12th also longevity/loss of life-force; 3rd is vitality (upachaya of prana). "
+            "2nd and 7th are maraka (12th from 3rd and from 8th). Malefics in 8th, or 8th-lord in 7th / "
+            "7th-lord in 8th, lean alpayu unless cancelled by strong Lagna/Moon/Saturn or benefics in 8th/3rd.\n"
+            "- Three-pair span check when signs are readable: (Lagna vs 8th), (Moon vs Saturn), "
+            "(Lagna vs Hora Lagna if HL is in the dump). Movable+movable or fixed+fixed vs mixed pairs — "
+            "majority vote for alpa / madhya / dirgha. State the vote; do not invent HL if absent.\n"
+            "- Maraka = 2nd/7th lords, occupants of 2/7, and planets they aspect/associate. "
+            "Link of 6/8 lords into 2/7 colors the *kind* of crisis (disease, accident, sudden event) — "
+            "not a scheduled death. 6th/8th/11th (hara) for disease load; Sun is naisargika vitality.\n"
+            "- Marana Karaka Sthana (MKS): Sun 12, Moon 8, Mars 7, Mercury 7, Jupiter 3, Venus 6, "
+            "Saturn 1, Rahu 9; Ketu has no MKS. A planet in MKS damages the houses it owns. "
+            "Flag MKS on Lagna lord, 8th lord, Saturn, Moon, or current dasa lords.\n"
+            "- A8 (Mrityu pada): planets occupying or having argala on A8 tend to give 8th-house results "
+            "in their AD. 3rd-from-AL periods can feel death-like; Atmakaraka periods more often teach "
+            "via crisis than kill — note if AK dasa is running.\n"
+            "- D-6 (Shashtamsa): root/source of disease (Ayurvedic cause). In D-6, 6th/8th affliction "
+            "and Mandi matter; reverse dusthana yogas (Sarala etc.) are NOT read as protective for existence.\n"
+            "- D-30 (Trimsamsa): opposite of D-9 — weaknesses and past-karma vulnerability. Rahu/Ketu "
+            "are key; tattva of the occupied signs (Agni/Jala/Prithvi/Vayu/Akasha) colors the body system. "
+            "D-1 shows what is suffered; D-6/D-30 show why. D-8 if present = hidden crisis/longevity amsa. "
+            "D-11/Rudramsa = destruction/maraka flavor. D-9/D-60 only as support or fine affliction.\n"
+            "- Shoola dasa (if the table exists): 9-year signs; judge the running sign vs AL and its trines "
+            "and 3rd-from-AL; malefic rasi/graha drishti on that spoke is a serious window. "
+            "Vimshottari remains the default timer; special dasas (e.g. Dwisaptati) only if the export shows them.\n"
+            "- TIMING GRANULARITY (mandatory in section 6): label each window as YYYY-MM to YYYY-MM. "
+            "Primary clock = natal Vimshottari AD start dates already in the payload (current AD, next AD, next MD). "
+            "A sensitive window is an AD (or overlapping ADs) whose lord is a maraka, 8th/3rd lord, MKS planet, "
+            "A8 occupant, or AK/AL-trine Shoola sign — quote the AD date line, then state the month range. "
+            "If only a year is printed, use YYYY-01 to YYYY-12. If Shoola gives a 9-year sign, name the year span "
+            "and the overlapping Vimshottari ADs inside it (month-level). "
+            "Gochara (Saturn/Jupiter/nodes on 1/8/Moon/maraka) may tighten a window to a month when the "
+            "snapshot + as-of date support it; otherwise keep the AD month-range. "
+            "List the nearest 1–3 upcoming windows from the analysis date, plus any current window. "
+            "Say 'insufficient' only if those dasa dates are marked NOT FOUND.\n"
+            "- Gochara: Saturn on natal 8th/Lagna/Moon (ashtama / Sade Sati / kantaka) is stress, not a death sentence. "
+            "Require natal maraka/ayur promise before calling a transit dangerous. Age must bound the reading "
+            "(do not imply balarishta for a middle-aged native; do not ignore current age vs claimed span).\n"
+            "- Body mapping only when supported: sign-from-Aries limbs; planet tissues (Sun bone, Moon blood, "
+            "Mars marrow/nerve, Mercury skin, Jupiter fat, Venus fluids/repro, Saturn muscle/vayu).\n"
+            "Topic-specific yogas (mandatory scan — state present / partial-broken / absent with evidence):\n"
+            "1) Ayur-span yogas: strong 8th/3rd/Lagna/Saturn (dirghayu) vs 8L–7L interchange, 8th-lord in 12th-from-8th, "
+            "or collapsed Lagna/Moon (alpayu) — name the class;\n"
+            "2) Maraka yogas (2nd/7th lords occupying or linking 8th/3rd; malefics in 2/7);\n"
+            "3) MKS of Lagna lord / 8th lord / Saturn / Moon / current MD-AD lords;\n"
+            "4) Balarishta / early Moon–Lagna–nodes affliction (apply only if age and data support);\n"
+            "5) A8 / Mrityu-pada links; Shoola-dasa AL-trine affliction if Shoola table is present;\n"
+            "6) Neecha Bhanga of 8th lord/Saturn/Lagna lord; gandanta on Lagna/Moon/8th as crisis, not automatic yoga.\n"
+            "Simple Remedies (only if ayur/maraka/MKS affliction is actually cited — householder-safe):\n"
+            "Mahamrityunjaya or Tryambaka japa when 8th/maraka/Mandi is afflicted; Saturday Saturn discipline "
+            "if Saturn/ayushkaraka is weak; Sunday Sun respect if vitality/Sun is weak; avoid gemstones of "
+            "6th or 8th lords; charity and physician care over fatalistic ritual; never prescribe giving up treatment."
+        ),
+    ),
+]
+
+ALL_TOPICS: list[TopicSpec] = [*TOPICS, *OPTIONAL_TOPICS]
+
+
 def build_user_prompt(
     topic: TopicSpec,
     chart_context: str,
@@ -676,6 +765,13 @@ def build_prediction_prompt(
         if transit_core_payload and transit_core_payload.strip():
             transit_block = f"\n\n{transit_core_payload.strip()}"
         payload_block = core_block + transit_block
+    longevity_timing = ""
+    if topic.key == "longevity":
+        longevity_timing = (
+            "   Longevity timing (mandatory): label every sensitive window YYYY-MM to YYYY-MM "
+            "using quoted natal Vimshottari AD (and Shoola/gochara) dates. List the current window "
+            "plus the next 1–3. Do not name a calendar day of death.\n"
+        )
     return f"""Interpret the following Vedic chart reading for {who}.
 
 {model_line}
@@ -725,7 +821,7 @@ Required response structure (sections 2–8 only; parse facts are already verifi
 5. Challenges / cautions — explicit and specific when indicated (do not minimize); say "none material" only if truly so
 6. Timing notes — quote MD/AD (and Sudasa/Narayana if used) from the natal dasa payload; use transit/gochara
    houses when present; include difficult windows plainly; relate to current age/life stage.
-   Say "insufficient" ONLY for items marked NOT FOUND in the payload inventory.
+{longevity_timing}   Say "insufficient" ONLY for items marked NOT FOUND in the payload inventory.
 7. Practical guidance — realistic actions given the net pattern and current age (not pep talk)
 8. Simple remedies (where applicable — tied to cited afflictions; skip or say none if chart is strong)
 """

@@ -18,7 +18,13 @@ from vedicastroagent.llm import (
     resolve_claude_model,
     resolve_provider,
 )
-from vedicastroagent.prompts import SYSTEM_INSTRUCTION, TOPICS, build_user_prompt
+from vedicastroagent.prompts import (
+    ALL_TOPICS,
+    OPTIONAL_TOPICS,
+    SYSTEM_INSTRUCTION,
+    TOPICS,
+    build_user_prompt,
+)
 
 
 FIXTURE = Path(__file__).parent / "fixtures" / "sample_chart.txt"
@@ -81,6 +87,7 @@ def test_claude_token_budgets_leave_room_for_thinking():
 def test_spiritual_prediction_gets_extra_output_budget():
     assert prediction_max_output_tokens("career", 20480) == 20480
     assert prediction_max_output_tokens("spiritual", 20480) == DENSE_TOPIC_PREDICTION_MAX_OUTPUT_TOKENS
+    assert prediction_max_output_tokens("longevity", 20480) == DENSE_TOPIC_PREDICTION_MAX_OUTPUT_TOKENS
     assert prediction_max_output_tokens("spiritual", 32768) == 32768
 
 
@@ -240,7 +247,7 @@ def test_all_topics_have_parse_checklists():
 
 def test_topics_include_remedy_guidance():
     assert "SIMPLE REMEDIES" in SYSTEM_INSTRUCTION
-    for topic in TOPICS:
+    for topic in ALL_TOPICS:
         assert "Simple Remedies" in topic.focus
         prompt = build_user_prompt(topic, "chart...")
         assert "Simple remedies" in prompt
@@ -250,7 +257,7 @@ def test_all_topics_require_topic_specific_yoga_scan():
     from vedicastroagent.prompts import PREDICTION_SYSTEM_INSTRUCTION, build_prediction_prompt
 
     assert "Topic-specific yogas are mandatory" in PREDICTION_SYSTEM_INSTRUCTION
-    for topic in TOPICS:
+    for topic in ALL_TOPICS:
         assert "Topic-specific yogas (mandatory scan" in topic.focus, topic.key
         assert "present / partial-broken / absent" in topic.focus, topic.key
         # Parse checklists should capture lord associations that feed yoga judgment.
@@ -459,3 +466,36 @@ def test_resolve_workers_caps_to_topic_count():
     assert _resolve_workers(4, topic_count=7) == 4
     assert _resolve_workers(10, topic_count=3) == 3
     assert _resolve_workers(1, topic_count=7) == 1
+
+
+def test_longevity_is_opt_in_and_uses_full_jhora_profile():
+    from datetime import date
+
+    from vedicastroagent.agent import _select_topics
+    from vedicastroagent.chart_loader import format_prediction_chart_payload
+    from vedicastroagent.prompts import PREDICTION_SYSTEM_INSTRUCTION, build_prediction_prompt
+
+    assert "longevity" not in {t.key for t in TOPICS}
+    assert {t.key for t in OPTIONAL_TOPICS} == {"longevity"}
+    assert [t.key for t in _select_topics(None)] == [t.key for t in TOPICS]
+    assert [t.key for t in _select_topics(["longevity"])] == ["longevity"]
+    assert [t.key for t in _select_topics(["ayur"])] == ["longevity"]
+
+    chart = load_chart_file(FIXTURE)
+    ctx = extract_relevant_context(chart, "longevity", as_of=date(2026, 8, 10))
+    payload = format_prediction_chart_payload(chart, "longevity", as_of=date(2026, 8, 10))
+    assert "ENTIRE NATAL JHORA EXPORT" in ctx
+    assert "ENTIRE NATAL JHORA EXPORT" in payload
+    assert "FULL NATAL JH EXPORT: FOUND" in payload
+    assert "Mrityu Sphuta" in payload
+    assert "House 8 sign" in payload
+    assert len(payload) > len(format_prediction_chart_payload(chart, "career", as_of=date(2026, 8, 10)))
+
+    lon = next(t for t in ALL_TOPICS if t.key == "longevity")
+    assert "year–month" in lon.focus or "YYYY-MM" in lon.focus
+    assert "calendar **day** of death" in lon.focus or "calendar day of death" in lon.focus
+    assert "Marana Karaka Sthana" in lon.focus
+    pred = build_prediction_prompt(lon, "parse facts", chart_load_payload=payload)
+    assert "year–month" in PREDICTION_SYSTEM_INSTRUCTION
+    assert "YYYY-MM to YYYY-MM" in pred
+    assert "ENTIRE NATAL JHORA EXPORT" in pred

@@ -44,7 +44,7 @@ Build a CLI Vedic astrology agent that:
   (override via `CLAUDE_*` env vars; `GEMINI_PREDICTION_MAX_TOKENS` for Gemini).
 - Claude calls must use **streaming** (`messages.stream` + `get_final_message`); the Anthropic SDK rejects
   non-streaming requests when high `max_tokens` implies >10 minutes.
-- Claude system prompts must use **ephemeral prompt caching** so the 14 topic calls reuse the same system text.
+- Claude system prompts must use **ephemeral prompt caching** so default topic parse/predict calls reuse the same system text.
 - Chart payloads must be **topic-only**: no off-topic Vargas, no alias duplicates (Navamsa if D-9 exists),
   natal sphuta/longitude table (110-line D-1 dump) included, Vimshottari **current + next** windows
   (not the full historical dasa dump), transit gochara core on prediction (full secondary Rasi diamond
@@ -93,7 +93,9 @@ Incorrect D-2/D-4/dasa readings can come from **context extraction bugs** or fro
 
 ## Topics currently supported
 
-`career`, `wealth`, `marriage`, `children`, `education`, `spiritual`, `transits`
+Default full report: `career`, `wealth`, `marriage`, `children`, `education`, `spiritual`, `transits`
+
+Opt-in only (never in the default report): `longevity` (`-t longevity` / `ayur` / `ayush`). Longevity sends the **entire raw JH natal dump** plus computed cores (not a topic-filtered excerpt). Timing must be **year–month** windows from natal Vimshottari AD / Shoola / gochara dates — not a calendar day of death. Prompts distill Parashara/Jaimini + SJC-Boston PVR lesson techniques from local `books/` PDFs — do not paste book text into the repo or prompts.
 
 ## How to request code changes
 

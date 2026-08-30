@@ -14,6 +14,7 @@ Topics:
 - Education
 - Spiritual progress
 - Transit outlook for the next **1 year**
+- Longevity / ayur (**opt-in only** — not in the default full report; use `-t longevity`)
 
 It uses the rich JH dump you already have: D-1, planetary longitudes/nakshatra/pada, divisional charts, Jaimini chara karakas, Gulika/Mandi, ashtakavarga, shadbala, dasas, and (when present) a second chart block as a transit/current snapshot.
 
@@ -72,6 +73,9 @@ vedicastroagent ~/Desktop/Srinu.txt --provider claude --model mythos
 
 # Selected topics
 vedicastroagent ~/Desktop/Srinu.txt -t career wealth marriage transits
+
+# Longevity is opt-in (uses the entire raw JH natal dump)
+vedicastroagent ~/Desktop/Srinu.txt -t longevity --name Srinu --provider claude --model mythos
 
 # Custom output path + transit reference date
 vedicastroagent ~/Desktop/Srinu.txt -o output/srinu.md --as-of 2026-08-08

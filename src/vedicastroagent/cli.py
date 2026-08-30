@@ -16,18 +16,20 @@ from . import __version__
 from .agent import VedicAstroAgent
 from .chart_loader import load_chart_file
 from .llm import CLAUDE_MODEL_ALIASES, PROVIDERS, create_llm_client, resolve_provider
-from .prompts import TOPICS
+from .prompts import ALL_TOPICS, OPTIONAL_TOPICS, TOPICS
 
 
 def build_parser() -> argparse.ArgumentParser:
-    topic_keys = [t.key for t in TOPICS]
+    topic_keys = [t.key for t in ALL_TOPICS]
+    default_keys = ", ".join(t.key for t in TOPICS)
+    optional_keys = ", ".join(t.key for t in OPTIONAL_TOPICS)
     claude_aliases = ", ".join(CLAUDE_MODEL_ALIASES)
     parser = argparse.ArgumentParser(
         prog="vedicastroagent",
         description=(
             "Analyze a Jagannatha Hora chart text/RTF export with Gemini or Claude across "
             "career, wealth (D2/D4), marriage, children, education, spiritual progress, "
-            "and a 1-year transit outlook."
+            "and a 1-year transit outlook. Longevity is opt-in only (-t longevity)."
         ),
     )
     parser.add_argument(
@@ -40,7 +42,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--topics",
         nargs="+",
         metavar="TOPIC",
-        help=f"Subset of topics to run. Choices: {', '.join(topic_keys)}",
+        help=(
+            f"Subset of topics to run. Default report: {default_keys}. "
+            f"Optional (not in default report): {optional_keys}. "
+            f"Choices: {', '.join(topic_keys)}"
+        ),
     )
     parser.add_argument(
         "-o",

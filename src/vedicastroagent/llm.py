@@ -30,7 +30,7 @@ DEFAULT_CLAUDE_MODEL = CLAUDE_MODEL_ALIASES[DEFAULT_CLAUDE_ALIAS]
 # Spiritual (D-9 / D-20 / Karakamsa + 6 yogas) needs more room than other topics.
 DEFAULT_PREDICTION_MAX_OUTPUT_TOKENS = 20480
 DENSE_TOPIC_PREDICTION_MAX_OUTPUT_TOKENS = 24576
-DENSE_PREDICTION_TOPICS = frozenset({"spiritual"})
+DENSE_PREDICTION_TOPICS = frozenset({"spiritual", "longevity"})
 
 
 def prediction_max_output_tokens(topic_key: str, default: int) -> int:
