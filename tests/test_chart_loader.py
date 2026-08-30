@@ -12,6 +12,7 @@ from vedicastroagent.llm import (
     CLAUDE_MODEL_ALIASES,
     DEFAULT_MODEL,
     DENSE_TOPIC_PREDICTION_MAX_OUTPUT_TOKENS,
+    LONGEVITY_PREDICTION_MAX_OUTPUT_TOKENS,
     PARSE_TEMPERATURE,
     PREDICTION_TEMPERATURE,
     create_llm_client,
@@ -88,8 +89,10 @@ def test_claude_token_budgets_leave_room_for_thinking():
 def test_spiritual_prediction_gets_extra_output_budget():
     assert prediction_max_output_tokens("career", 20480) == 20480
     assert prediction_max_output_tokens("spiritual", 20480) == DENSE_TOPIC_PREDICTION_MAX_OUTPUT_TOKENS
-    assert prediction_max_output_tokens("longevity", 20480) == DENSE_TOPIC_PREDICTION_MAX_OUTPUT_TOKENS
+    assert prediction_max_output_tokens("longevity", 20480) == LONGEVITY_PREDICTION_MAX_OUTPUT_TOKENS
+    assert prediction_max_output_tokens("longevity", 20480) > DENSE_TOPIC_PREDICTION_MAX_OUTPUT_TOKENS
     assert prediction_max_output_tokens("spiritual", 32768) == 32768
+    assert prediction_max_output_tokens("longevity", 40960) == 40960
 
 
 def test_claude_client_uses_streaming_for_long_requests(monkeypatch):

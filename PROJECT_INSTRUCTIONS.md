@@ -40,7 +40,7 @@ Build a CLI Vedic astrology agent that:
 - Prediction temperature: **0.05**
 - Defined in `src/vedicastroagent/llm.py`
 - Claude Sonnet 5 / Opus 5: omit `temperature`; default `max_tokens` parse **8192** / predict **20480**
-  (spiritual **24576**) and `output_config.effort` **low parse / medium predict**
+  (spiritual **24576**, longevity **32768**) and `output_config.effort` **low parse / medium predict**
   (override via `CLAUDE_*` env vars; `GEMINI_PREDICTION_MAX_TOKENS` for Gemini).
 - Claude calls must use **streaming** (`messages.stream` + `get_final_message`); the Anthropic SDK rejects
   non-streaming requests when high `max_tokens` implies >10 minutes.

@@ -28,19 +28,20 @@ DEFAULT_CLAUDE_MODEL = CLAUDE_MODEL_ALIASES[DEFAULT_CLAUDE_ALIAS]
 
 # Prediction output budget. Claude adaptive thinking counts against this ceiling.
 # Spiritual (D-9 / D-20 / Karakamsa + 6 yogas) needs more room than other topics.
+# Longevity also carries the full JH dump + 45-year gochara table.
 DEFAULT_PREDICTION_MAX_OUTPUT_TOKENS = 20480
 DENSE_TOPIC_PREDICTION_MAX_OUTPUT_TOKENS = 24576
+LONGEVITY_PREDICTION_MAX_OUTPUT_TOKENS = 32768
 DENSE_PREDICTION_TOPICS = frozenset({"spiritual", "longevity"})
+_TOPIC_PREDICTION_TOKEN_FLOOR = {
+    "spiritual": DENSE_TOPIC_PREDICTION_MAX_OUTPUT_TOKENS,
+    "longevity": LONGEVITY_PREDICTION_MAX_OUTPUT_TOKENS,
+}
 
 
 def prediction_max_output_tokens(topic_key: str, default: int) -> int:
     """Raise the per-call ceiling for dense topics without shrinking a user override."""
-    floor = (
-        DENSE_TOPIC_PREDICTION_MAX_OUTPUT_TOKENS
-        if topic_key in DENSE_PREDICTION_TOPICS
-        else default
-    )
-    return max(default, floor)
+    return max(default, _TOPIC_PREDICTION_TOKEN_FLOOR.get(topic_key, default))
 
 
 @runtime_checkable
