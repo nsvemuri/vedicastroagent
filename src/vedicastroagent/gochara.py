@@ -68,7 +68,8 @@ def format_longevity_gochara_table(
     except ImportError:
         return (
             "=== 45-YEAR GOCHARA INGRESSES ===\n"
-            "NOT FOUND: install pyswisseph to compute sidereal transits."
+            "NOT FOUND: install the gochara extra (pip install -e \".[gochara]\") "
+            "to compute sidereal transits. On Windows that extra needs Microsoft C++ Build Tools."
         )
 
     bodies = parse_body_longitude_table(chart.natal_text)

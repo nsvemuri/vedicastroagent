@@ -1,5 +1,8 @@
+import importlib.util
 import re
 from pathlib import Path
+
+import pytest
 
 from vedicastroagent.chart_loader import (
     extract_dasa_section,
@@ -506,10 +509,13 @@ def test_longevity_is_opt_in_and_uses_full_jhora_profile():
     assert "ENTIRE NATAL JHORA EXPORT" in pred
     assert "COMPUTED VIMSHOTTARI PRATYANTARDASA" in payload
     assert "peak 20" in payload
-    assert "45-YEAR GOCHARA INGRESSES: FOUND" in payload
     assert "45-YEAR GOCHARA INGRESSES" in pred
     career_payload = format_prediction_chart_payload(chart, "career", as_of=date(2026, 8, 10))
     assert "45-YEAR GOCHARA INGRESSES" not in career_payload
+    if importlib.util.find_spec("swisseph"):
+        assert "45-YEAR GOCHARA INGRESSES: FOUND" in payload
+    else:
+        assert "45-YEAR GOCHARA INGRESSES: NOT FOUND" in payload
 
 
 def test_vimsottari_pratyantardasa_pins_peak_month():
@@ -537,6 +543,8 @@ def test_vimsottari_pratyantardasa_pins_peak_month():
 
 def test_gochara_parses_jh_ayanamsa_and_saturn_pisces_ingress():
     from datetime import date
+
+    pytest.importorskip("swisseph")
 
     from vedicastroagent.gochara import (
         format_longevity_gochara_table,

@@ -13,11 +13,11 @@ dependencies = [
   "anthropic>=0.40.0",
   "python-dotenv>=1.0.0",
   "rich>=13.0.0",
-  "pyswisseph>=2.10.0",
 ]
 
 [project.optional-dependencies]
 dev = ["pytest>=8.0.0"]
+gochara = ["pyswisseph>=2.10.0"]
 
 [project.scripts]
 vedicastroagent = "vedicastroagent.cli:main"

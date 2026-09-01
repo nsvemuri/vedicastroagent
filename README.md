@@ -26,8 +26,13 @@ python3 -m venv .venv
 source .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install -e .
 
+# Optional: 45-year gochara ingresses for longevity (needs a C compiler on Windows)
+pip install -e ".[gochara]"
+
 cp .env.example .env
 ```
+
+**Windows and `pyswisseph`:** the core agent does not need C++ Build Tools. `pyswisseph` is a C extension with no wheel for many Windows/Python combos, so `pip` tries to compile it and fails with *Microsoft Visual C++ 14.0 or greater is required*. Use `pip install -e .` without the extra unless you need longevity transits. To enable gochara, either install [Microsoft C++ Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/) (workload **Desktop development with C++**), restart the terminal, then `pip install -e ".[gochara]"`, or use a Python version that has a prebuilt wheel (often 3.11).
 
 Put **only the key for the provider you use** in `.env`:
 
@@ -114,4 +119,4 @@ Pushkara Navamsha is deduced by the model from navamsa placements when JH does n
 - Gemini-only and Claude-only setups are both supported; you do not need both API keys.
 - This is interpretive decision support grounded in the supplied chart export, not a substitute for a human Jyotishi.
 - Transit detail is strongest when your export includes a recent secondary chart and current dasa tables; the agent also asks the model for a forward 12-month gochara/dasa synthesis from `--as-of`.
-- Longevity (`-t longevity`) also injects a computed **45-year sidereal ingress calendar** (Saturn, Jupiter, Rahu/Ketu, Mars) via Swiss Ephemeris (`pyswisseph`), using the JH ayanamsa when present (else Lahiri). Houses are counted from natal Lagna. Reinstall deps after pull: `pip install -e .`.
+- Longevity (`-t longevity`) also injects a computed **45-year sidereal ingress calendar** (Saturn, Jupiter, Rahu/Ketu, Mars) via Swiss Ephemeris when the optional extra is installed: `pip install -e ".[gochara]"`. Uses the JH ayanamsa when present (else Lahiri). Houses are counted from natal Lagna. Without the extra, longevity still runs; the ingress table is marked NOT FOUND.

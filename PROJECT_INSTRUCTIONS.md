@@ -118,7 +118,7 @@ Add items under **Requested changes** below. Be concrete: file/area, desired beh
 - Add/adjust tests in `tests/` when changing chart parsing, providers, or default model ids.
 - Do not commit secrets (`.env`).
 - Do not invent ephemeris precision the export does not contain.
-- Longevity may attach a **computed** 45-year sidereal gochara ingress table (`gochara.py` / Swiss Ephemeris). Use only those computed dates; still do not invent longitudes.
+- Longevity may attach a **computed** 45-year sidereal gochara ingress table (`gochara.py` / Swiss Ephemeris). `pyswisseph` is an **optional extra** (`pip install -e ".[gochara]"`), not a required install dep — Windows often has no wheel and needs MSVC to compile. Use only those computed dates; still do not invent longitudes. If `swisseph` is missing, the payload must say NOT FOUND, not fail install.
 - When tightening astrology accuracy, prefer prompt/checklist + extraction fixes; keep parse temperature at **0**.
 
 ## Verification checklist
