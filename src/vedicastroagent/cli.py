@@ -15,7 +15,13 @@ from rich.panel import Panel
 from . import __version__
 from .agent import VedicAstroAgent
 from .chart_loader import load_chart_file
-from .llm import CLAUDE_MODEL_ALIASES, PROVIDERS, create_llm_client, resolve_provider
+from .llm import (
+    CLAUDE_MODEL_ALIASES,
+    GEMINI_MODEL_ALIASES,
+    PROVIDERS,
+    create_llm_client,
+    resolve_provider,
+)
 from .prompts import ALL_TOPICS, OPTIONAL_TOPICS, TOPICS
 
 
@@ -24,6 +30,7 @@ def build_parser() -> argparse.ArgumentParser:
     default_keys = ", ".join(t.key for t in TOPICS)
     optional_keys = ", ".join(t.key for t in OPTIONAL_TOPICS)
     claude_aliases = ", ".join(CLAUDE_MODEL_ALIASES)
+    gemini_aliases = ", ".join(GEMINI_MODEL_ALIASES)
     parser = argparse.ArgumentParser(
         prog="vedicastroagent",
         description=(
@@ -76,10 +83,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--model",
         default=None,
         help=(
-            "Model id or Claude alias. "
-            f"Claude aliases: {claude_aliases}. "
-            "Gemini default: gemini-3.1-pro-preview (or GEMINI_MODEL). "
-            "Claude default: sonnet (or CLAUDE_MODEL)."
+            "Model id or alias. "
+            f"Gemini aliases: {gemini_aliases} "
+            "(pro = gemini-3.1-pro-preview, flash = gemini-3.8-flash). "
+            f"Claude aliases: {claude_aliases} (opus = claude-opus-5-5). "
+            "Defaults: Gemini pro (or GEMINI_MODEL), Claude sonnet (or CLAUDE_MODEL)."
         ),
     )
     parser.add_argument(
@@ -194,11 +202,9 @@ def _dry_run(
 
             model_label = resolve_claude_model(model)
         else:
-            import os
+            from .llm import resolve_gemini_model
 
-            from .llm import DEFAULT_GEMINI_MODEL
-
-            model_label = model or os.getenv("GEMINI_MODEL", DEFAULT_GEMINI_MODEL)
+            model_label = resolve_gemini_model(model)
 
     birth_date, subject_age = subject_age_as_of(chart, as_of)
     console.print(Panel.fit("[bold]Dry run — chart parsed successfully[/bold]"))

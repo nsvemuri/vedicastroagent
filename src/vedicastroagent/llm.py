@@ -14,13 +14,24 @@ PROVIDERS = ("gemini", "claude")
 
 # Gemini
 DEFAULT_GEMINI_MODEL = "gemini-3.1-pro-preview"
+GEMINI_FLASH_MODEL = "gemini-3.8-flash"
 # Backward-compatible alias used across the package.
 DEFAULT_MODEL = DEFAULT_GEMINI_MODEL
+
+# Gemini aliases the user can pick; mapped to current API model ids.
+GEMINI_MODEL_ALIASES: dict[str, str] = {
+    "pro": DEFAULT_GEMINI_MODEL,
+    "flash": GEMINI_FLASH_MODEL,
+}
+# Gemini 3.8 Flash ignores temperature. thinking_level is the sampling control.
+# LOW for checklist extraction; MEDIUM (API default) for interpretation.
+GEMINI_PARSE_THINKING_LEVEL = "LOW"
+GEMINI_PREDICTION_THINKING_LEVEL = "MEDIUM"
 
 # Claude aliases the user can pick; mapped to current API model ids.
 CLAUDE_MODEL_ALIASES: dict[str, str] = {
     "sonnet": "claude-sonnet-5",
-    "opus": "claude-opus-5",
+    "opus": "claude-opus-5-5",
     "mythos": "claude-mythos-5",
 }
 DEFAULT_CLAUDE_ALIAS = "sonnet"
@@ -84,6 +95,36 @@ def resolve_provider(provider: str | None = None) -> str:
     return "gemini"
 
 
+def resolve_gemini_model(model: str | None = None) -> str:
+    """Resolve pro/flash aliases, GEMINI_MODEL, or a full Gemini model id."""
+    raw = (model or os.getenv("GEMINI_MODEL") or DEFAULT_GEMINI_MODEL).strip()
+    key = raw.lower()
+    if key in GEMINI_MODEL_ALIASES:
+        return GEMINI_MODEL_ALIASES[key]
+    if raw.startswith("gemini-"):
+        return raw
+    raise ValueError(
+        f"Unknown Gemini model {model!r}. "
+        f"Choose one of: {', '.join(GEMINI_MODEL_ALIASES)} "
+        f"(or a full id like {DEFAULT_GEMINI_MODEL})."
+    )
+
+
+def gemini_omits_temperature(model: str) -> bool:
+    """Return True when the Gemini API ignores temperature for this model.
+
+    Gemini 3.8 Flash strips temperature/top_p/top_k. Use thinking_level instead.
+    """
+    return model == GEMINI_FLASH_MODEL or model.startswith(f"{GEMINI_FLASH_MODEL}-")
+
+
+def gemini_thinking_level(model: str, *, parse: bool) -> str | None:
+    """Thinking level for Gemini models that use it; None keeps the API default."""
+    if not gemini_omits_temperature(model):
+        return None
+    return GEMINI_PARSE_THINKING_LEVEL if parse else GEMINI_PREDICTION_THINKING_LEVEL
+
+
 def resolve_claude_model(model: str | None = None) -> str:
     """Resolve sonnet/opus/mythos aliases or a full Claude model id."""
     raw = (model or os.getenv("CLAUDE_MODEL") or DEFAULT_CLAUDE_ALIAS).strip()
@@ -102,7 +143,7 @@ def resolve_claude_model(model: str | None = None) -> str:
 def claude_supports_temperature(model: str) -> bool:
     """Return False when the Messages API rejects the temperature parameter.
 
-    Claude Sonnet 5, Opus 4.7+, and Mythos return HTTP 400 if temperature is sent.
+    Claude Sonnet 5, Opus 5.5, Opus 4.7+, and Mythos return HTTP 400 if temperature is sent.
     We omit it for all Claude model ids — safe for older Sonnet/Opus too (API default).
     """
     _ = model

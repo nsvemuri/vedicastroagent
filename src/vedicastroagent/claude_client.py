@@ -145,7 +145,7 @@ class ClaudeClient:
             raise RuntimeError(
                 f"Empty response from model {self.config.model} "
                 f"(stop_reason={stop}, output_tokens={out_tok}, blocks={block_types}). "
-                "On Claude Sonnet 5 / Opus 5, adaptive thinking counts against max_tokens; "
+                "On Claude Sonnet 5 / Opus 5.5, adaptive thinking counts against max_tokens; "
                 "raise parse/prediction max_tokens or lower effort if stop_reason is max_tokens."
             )
         return text

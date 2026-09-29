@@ -14,6 +14,9 @@ from .llm import (
     LLMClientConfig,
     PARSE_TEMPERATURE,
     PREDICTION_TEMPERATURE,
+    gemini_omits_temperature,
+    gemini_thinking_level,
+    resolve_gemini_model,
 )
 
 # Backward-compatible exports.
@@ -48,8 +51,11 @@ class GeminiClient:
                 "or a .env file. See .env.example."
             )
         self._gemini.api_key = api_key
+        # Default id means "not pinned": honor GEMINI_MODEL (alias or full id).
         if self._gemini.model == DEFAULT_GEMINI_MODEL:
-            self._gemini.model = os.getenv("GEMINI_MODEL", self._gemini.model)
+            self._gemini.model = resolve_gemini_model(None)
+        else:
+            self._gemini.model = resolve_gemini_model(self._gemini.model)
         raw_predict = os.getenv("GEMINI_PREDICTION_MAX_TOKENS")
         if raw_predict:
             try:
@@ -73,17 +79,24 @@ class GeminiClient:
         user: str,
         temperature: float | None = None,
         max_output_tokens: int | None = None,
+        parse: bool = False,
     ) -> str:
+        temp = self.config.prediction_temperature if temperature is None else temperature
+        config_kwargs: dict = {
+            "system_instruction": system,
+            "max_output_tokens": max_output_tokens or self.config.max_output_tokens,
+        }
+        # Gemini 3.8 Flash ignores temperature. thinking_level selects parse vs predict.
+        if gemini_omits_temperature(self.config.model):
+            level = gemini_thinking_level(self.config.model, parse=parse)
+            if level:
+                config_kwargs["thinking_config"] = types.ThinkingConfig(thinking_level=level)
+        else:
+            config_kwargs["temperature"] = temp
         response = self._client.models.generate_content(
             model=self.config.model,
             contents=user,
-            config=types.GenerateContentConfig(
-                system_instruction=system,
-                temperature=(
-                    self.config.prediction_temperature if temperature is None else temperature
-                ),
-                max_output_tokens=max_output_tokens or self.config.max_output_tokens,
-            ),
+            config=types.GenerateContentConfig(**config_kwargs),
         )
         text = (response.text or "").strip()
         if not text:
@@ -96,6 +109,7 @@ class GeminiClient:
             user=user,
             temperature=self.config.parse_temperature,
             max_output_tokens=self.config.parse_max_output_tokens,
+            parse=True,
         )
 
     def generate_prediction(

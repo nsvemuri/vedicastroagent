@@ -21,6 +21,7 @@ from vedicastroagent.llm import (
     create_llm_client,
     prediction_max_output_tokens,
     resolve_claude_model,
+    resolve_gemini_model,
     resolve_provider,
 )
 from vedicastroagent.prompts import (
@@ -49,10 +50,66 @@ def test_default_temperature_is_zero_for_parse():
     assert GeminiConfig.prediction_temperature == 0.05
 
 
+def test_gemini_aliases_resolve():
+    from vedicastroagent.llm import GEMINI_FLASH_MODEL, GEMINI_MODEL_ALIASES
+
+    assert set(GEMINI_MODEL_ALIASES) == {"pro", "flash"}
+    assert resolve_gemini_model("pro") == "gemini-3.1-pro-preview"
+    assert resolve_gemini_model("flash") == GEMINI_FLASH_MODEL
+    assert resolve_gemini_model("gemini-3.8-flash") == "gemini-3.8-flash"
+
+
+def test_gemini_flash_uses_thinking_level_not_temperature():
+    from vedicastroagent.llm import (
+        GEMINI_PARSE_THINKING_LEVEL,
+        GEMINI_PREDICTION_THINKING_LEVEL,
+        gemini_omits_temperature,
+        gemini_thinking_level,
+    )
+
+    assert gemini_omits_temperature("gemini-3.8-flash")
+    assert not gemini_omits_temperature("gemini-3.1-pro-preview")
+    assert gemini_thinking_level("gemini-3.8-flash", parse=True) == GEMINI_PARSE_THINKING_LEVEL
+    assert gemini_thinking_level("gemini-3.8-flash", parse=False) == GEMINI_PREDICTION_THINKING_LEVEL
+    assert GEMINI_PARSE_THINKING_LEVEL == "LOW"
+    assert GEMINI_PREDICTION_THINKING_LEVEL == "MEDIUM"
+    assert gemini_thinking_level("gemini-3.1-pro-preview", parse=True) is None
+
+
+def test_gemini_flash_parse_and_predict_request_shape(monkeypatch):
+    from types import SimpleNamespace
+
+    from vedicastroagent.gemini_client import GeminiClient, GeminiConfig
+
+    calls: list[dict] = []
+
+    class FakeModels:
+        def generate_content(self, **kwargs):
+            calls.append(kwargs)
+            return SimpleNamespace(text="ok")
+
+    monkeypatch.setenv("GEMINI_API_KEY", "test-key")
+    client = GeminiClient(GeminiConfig(model="flash", api_key="test-key"))
+    client._client = SimpleNamespace(models=FakeModels())
+
+    assert client.config.model == "gemini-3.8-flash"
+    assert client.generate_parse(system="sys", user="parse") == "ok"
+    assert client.generate_prediction(system="sys", user="predict") == "ok"
+
+    parse_cfg = calls[0]["config"]
+    predict_cfg = calls[1]["config"]
+    assert parse_cfg.temperature is None
+    assert predict_cfg.temperature is None
+    assert parse_cfg.thinking_config.thinking_level.value == "LOW"
+    assert predict_cfg.thinking_config.thinking_level.value == "MEDIUM"
+    assert calls[0]["model"] == "gemini-3.8-flash"
+    assert calls[1]["model"] == "gemini-3.8-flash"
+
+
 def test_claude_aliases_resolve():
     assert set(CLAUDE_MODEL_ALIASES) == {"sonnet", "opus", "mythos"}
     assert resolve_claude_model("sonnet") == "claude-sonnet-5"
-    assert resolve_claude_model("opus") == "claude-opus-5"
+    assert resolve_claude_model("opus") == "claude-opus-5-5"
     assert resolve_claude_model("mythos") == "claude-mythos-5"
     assert resolve_claude_model("claude-sonnet-5") == "claude-sonnet-5"
 
@@ -64,6 +121,7 @@ def test_claude_models_omit_temperature():
         "claude-sonnet-5",
         "claude-sonnet-4-6",
         "claude-opus-5",
+        "claude-opus-5-5",
         "claude-opus-4-7",
         "claude-opus-4-8",
         "claude-mythos-5",

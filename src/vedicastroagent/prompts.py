@@ -36,7 +36,7 @@ Models often misread JH ASCII Vargas and dasa tables. Prevent that as follows:
 
 SYSTEM_INSTRUCTION = f"""You are an expert Vedic (Jyotish) astrologer trained in Parashari, Jaimini,
 and classical dasa techniques. You analyze Jagannatha Hora (JH) chart exports carefully.
-Default Gemini model id: `{DEFAULT_MODEL}`. Claude users may select sonnet/opus/mythos.
+Default Gemini model id: `{DEFAULT_MODEL}`. Gemini users may select pro or flash (Gemini 3.8 Flash). Claude users may select sonnet/opus/mythos.
 The user prompt names the actual model used for this call.
 
 Rules:
@@ -667,7 +667,14 @@ def build_user_prompt(
     """Legacy single-call prompt (parse + predict). Prefer build_parse_prompt + build_prediction_prompt."""
     who = native_label or "the native"
     when = as_of or "today"
-    model_line = f"Model: {model_name or DEFAULT_MODEL} (Gemini 3.1 Pro family)"
+    label = model_name or DEFAULT_MODEL
+    if "3.8-flash" in label:
+        family = "Gemini 3.8 Flash"
+    elif label.startswith("claude-"):
+        family = "Claude"
+    else:
+        family = "Gemini 3.1 Pro family"
+    model_line = f"Model: {label} ({family})"
     return f"""Analyze the following Vedic chart data for {who}.
 
 {model_line}

@@ -2,8 +2,8 @@
 
 CLI agent that reads a **Jagannatha Hora** natal chart export (plain text or RTF, including `.txt` files that are actually RTF) and runs focused analyses with either:
 
-- **Gemini 3.1 Pro** (`gemini-3.1-pro-preview` by default), or
-- **Claude** — pick **`sonnet`**, **`opus`**, or **`mythos`**
+- **Gemini** — **`pro`** (`gemini-3.1-pro-preview`, default) or **`flash`** (`gemini-3.8-flash`), or
+- **Claude** — pick **`sonnet`**, **`opus`** (`claude-opus-5-5`), or **`mythos`**
 
 Topics:
 
@@ -45,9 +45,9 @@ Environment variables:
 |---|---|
 | `LLM_PROVIDER` | `gemini` or `claude` (optional if only one key is present) |
 | `GEMINI_API_KEY` | Required for Gemini (or `GOOGLE_API_KEY`) |
-| `GEMINI_MODEL` | Optional Gemini model id; default `gemini-3.1-pro-preview` |
+| `GEMINI_MODEL` | Gemini alias `pro` / `flash`, or a full id; default `gemini-3.1-pro-preview` |
 | `ANTHROPIC_API_KEY` | Required for Claude (or `CLAUDE_API_KEY`) |
-| `CLAUDE_MODEL` | Claude alias `sonnet` / `opus` / `mythos`, or a full id like `claude-sonnet-5` |
+| `CLAUDE_MODEL` | Claude alias `sonnet` / `opus` / `mythos`, or a full id like `claude-opus-5-5` |
 | `VEDIC_MAX_WORKERS` | Optional parallel topic workers; **default `7`** (use `1` for sequential) |
 
 Generation defaults (shared by both providers):
@@ -58,6 +58,7 @@ Generation defaults (shared by both providers):
 | Prediction temperature | **0.05** | Interpretation/prediction (minimal sampling) |
 | Topic parallelism | **parallel** | Each life-area query is an independent LLM call |
 | Claude effort | **low parse / medium predict** | Extraction stays cheap; interpretation keeps medium thinking |
+| Gemini 3.8 Flash thinking | **low parse / medium predict** | Flash ignores temperature; thinking level is the control |
 | Claude max tokens | **8k parse / 20k predict** (spiritual **24k**, longevity **32k**) | Room for thinking + full sections; override `CLAUDE_*_MAX_TOKENS` |
 
 For contributor / coding-agent guidance you can edit, see [`PROJECT_INSTRUCTIONS.md`](PROJECT_INSTRUCTIONS.md).
@@ -68,10 +69,13 @@ For contributor / coding-agent guidance you can edit, see [`PROJECT_INSTRUCTIONS
 # Parse only (no API calls)
 vedicastroagent ~/Desktop/Srinu.txt --dry-run
 
-# Gemini (default when GEMINI_API_KEY is set)
+# Gemini 3.1 Pro (default when GEMINI_API_KEY is set)
 vedicastroagent ~/Desktop/Srinu.txt --name Srinu --provider gemini
 
-# Claude — pick sonnet, opus, or mythos
+# Gemini 3.8 Flash (parse + predict)
+vedicastroagent ~/Desktop/Srinu.txt --name Srinu --provider gemini --model flash
+
+# Claude — pick sonnet, opus (Opus 5.5), or mythos
 vedicastroagent ~/Desktop/Srinu.txt --name Srinu --provider claude --model sonnet
 vedicastroagent ~/Desktop/Srinu.txt --provider claude --model opus
 vedicastroagent ~/Desktop/Srinu.txt --provider claude --model mythos
@@ -114,7 +118,7 @@ Pushkara Navamsha is deduced by the model from navamsa placements when JH does n
 
 ## Notes
 
-- Each topic uses a **two-phase** call: parse (temperature **0**) then predict (temperature **0.05**), for both Gemini and Claude.
+- Each topic uses a **two-phase** call: parse then predict. Gemini 3.1 Pro and the prompt text use temperature **0** / **0.05**. Gemini 3.8 Flash ignores temperature and uses thinking level **low** / **medium**. Claude omits temperature.
 - Multi-topic runs issue **parallel** LLM calls by default (wall time ≈ slowest topic, not sum of all). Use `--workers 1` if you hit rate limits.
 - Gemini-only and Claude-only setups are both supported; you do not need both API keys.
 - This is interpretive decision support grounded in the supplied chart export, not a substitute for a human Jyotishi.

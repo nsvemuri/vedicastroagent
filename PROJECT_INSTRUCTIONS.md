@@ -16,14 +16,17 @@ Build a CLI Vedic astrology agent that:
 
 ### Gemini
 
-- Product name: **Gemini 3.1 Pro**
+- Product names: **Gemini 3.1 Pro** (default) and **Gemini 3.8 Flash**
 - Default API model id: **`gemini-3.1-pro-preview`**
+- Flash API model id: **`gemini-3.8-flash`** (parse + predict)
+- Aliases: **`pro`** → `gemini-3.1-pro-preview`, **`flash`** → `gemini-3.8-flash`
 - Auth: `GEMINI_API_KEY` or `GOOGLE_API_KEY`
-- Model override: `GEMINI_MODEL` or `--model`
+- Model override: `GEMINI_MODEL` or `--model pro|flash|<full-id>`
+- Gemini 3.8 Flash ignores `temperature`. Parse uses thinking level **low**; predict uses **medium**. Gemini 3.1 Pro still sends temperature 0 / 0.05.
 
 ### Claude
 
-- Aliases: **`sonnet`** → `claude-sonnet-5`, **`opus`** → `claude-opus-5`, **`mythos`** → `claude-mythos-5`
+- Aliases: **`sonnet`** → `claude-sonnet-5`, **`opus`** → `claude-opus-5-5`, **`mythos`** → `claude-mythos-5`
 - Auth: `ANTHROPIC_API_KEY` or `CLAUDE_API_KEY`
 - Model override: `CLAUDE_MODEL` or `--model sonnet|opus|mythos|<full-id>`
 
@@ -39,7 +42,7 @@ Build a CLI Vedic astrology agent that:
 - Parse temperature: **0**
 - Prediction temperature: **0.05**
 - Defined in `src/vedicastroagent/llm.py`
-- Claude Sonnet 5 / Opus 5: omit `temperature`; default `max_tokens` parse **8192** / predict **20480**
+- Claude Sonnet 5 / Opus 5.5: omit `temperature`; default `max_tokens` parse **8192** / predict **20480**
   (spiritual **24576**, longevity **32768**) and `output_config.effort` **low parse / medium predict**
   (override via `CLAUDE_*` env vars; `GEMINI_PREDICTION_MAX_TOKENS` for Gemini).
 - Claude calls must use **streaming** (`messages.stream` + `get_final_message`); the Anthropic SDK rejects
@@ -82,7 +85,8 @@ Incorrect D-2/D-4/dasa readings can come from **context extraction bugs** or fro
 ## Critical accuracy rules (do not regress)
 
 - Default Gemini model must remain **`gemini-3.1-pro-preview`** unless the user explicitly changes it.
-- Claude aliases must remain **`sonnet` / `opus` / `mythos`**.
+- Gemini **`flash`** must resolve to **`gemini-3.8-flash`** for both parse and prediction.
+- Claude aliases must remain **`sonnet` / `opus` / `mythos`**, with **`opus`** → **`claude-opus-5-5`**.
 - Default temperature must remain **0 for parse** and **0.05 for prediction** unless the user explicitly asks to change it.
 - Each topic uses two LLM calls: parse (checklist, temp 0) then predict (sections 2–8, temp 0.05).
 - Do **not** match bare `"Hora"` for wealth — it collides with `Hora Lord` / `Hora Lagna`. Use labeled **`D-2`** / **`D-4`** ASCII blocks.
